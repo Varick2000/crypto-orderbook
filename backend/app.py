@@ -160,6 +160,30 @@ async def process_client_message(websocket: WebSocket, message: str):
             await orderbook_manager.clear_orderbooks()
             await websocket_manager.broadcast({"type": "orderbooks_cleared"})
             
+        elif action == "get_orderbook":
+            token = data.get("token")
+            exchange = data.get("exchange")
+            
+            if not token or not exchange:
+                await websocket.send_text(json.dumps({"type": "error", "message": "Token or exchange missing"}))
+                return
+                
+            # Отримуємо дані ордербуку
+            orderbook_data = await orderbook_manager.get_orderbook(token, exchange)
+            if orderbook_data:
+                await websocket.send_text(json.dumps({
+                    "type": "orderbook_data",
+                    "token": token,
+                    "exchange": exchange,
+                    "sell_orders": orderbook_data.get("sell_orders", []),
+                    "buy_orders": orderbook_data.get("buy_orders", [])
+                }))
+            else:
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": f"No orderbook data available for {token} on {exchange}"
+                }))
+            
         else:
             await websocket.send_text(json.dumps({"type": "error", "message": f"Unknown action: {action}"}))
             

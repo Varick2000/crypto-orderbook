@@ -230,6 +230,283 @@
         .status-legend-item:last-child {
             margin-bottom: 0;
         }
+        .orderbook-tables-container {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        
+        .orderbook-tables-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .orderbook-tables-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .orderbook-table-container {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .orderbook-title {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            color: #374151;
+            text-align: center;
+        }
+        
+        .orderbook-content {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .orderbook-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .orderbook-side {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        
+        .orderbook-side h4 {
+            margin: 0 0 8px 0;
+            color: #374151;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        .orderbook-side h4:first-child {
+            color: #ef4444;
+        }
+        
+        .orderbook-side h4:last-child {
+            color: #10b981;
+        }
+
+        .orderbook-row {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .orderbook-row.sell:hover {
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        .orderbook-row.buy:hover {
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+
+        .orderbook-row .price {
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        .orderbook-row.sell .price {
+            color: #ef4444;
+        }
+
+        .orderbook-row.buy .price {
+            color: #00ff9d;
+        }
+
+        .orderbook-row .amount {
+            color: #6b7280;
+            font-family: monospace;
+        }
+
+        .orderbook-row .total {
+            color: #374151;
+            font-weight: 500;
+            font-family: monospace;
+        }
+
+        .orderbook-row .depth {
+            position: absolute;
+            height: 100%;
+            opacity: 0.15;
+            z-index: 0;
+            top: 0;
+            right: 0;
+            transition: width 0.3s ease;
+        }
+
+        .orderbook-row.sell .depth {
+            background-color: #ef4444;
+        }
+
+        .orderbook-row.buy .depth {
+            background-color: rgba(0, 255, 157, 0.15);
+        }
+
+        .orderbook-row td {
+            position: relative;
+            z-index: 1;
+            padding: 8px 12px;
+        }
+
+        .orderbook-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .orderbook-table th {
+            background-color: #2a2a2a;
+            color: #888;
+            font-weight: normal;
+            padding: 8px 12px;
+            text-align: right;
+            border: none;
+            font-size: 12px;
+        }
+
+        .orderbook-table th:first-child {
+            text-align: left;
+        }
+
+        .orderbook-table td {
+            padding: 6px 12px;
+            text-align: right;
+            border: none;
+            position: relative;
+        }
+
+        .orderbook-table td:first-child {
+            text-align: left;
+        }
+
+        .orderbook-row {
+            position: relative;
+            height: 24px;
+        }
+
+        .orderbook-row .price {
+            font-weight: 500;
+        }
+
+        .orderbook-row.sell .price {
+            color: #ff4d4d;
+        }
+
+        .orderbook-row.buy .price {
+            color: #00ff9d;
+        }
+
+        .orderbook-row .amount {
+            color: #888;
+        }
+
+        .orderbook-row .total {
+            color: #fff;
+        }
+
+        .orderbook-row .depth {
+            position: absolute;
+            height: 100%;
+            top: 0;
+            right: 0;
+            z-index: 0;
+            transition: width 0.3s ease;
+        }
+
+        .orderbook-row.sell .depth {
+            background-color: rgba(255, 77, 77, 0.1);
+        }
+
+        .orderbook-row.buy .depth {
+            background-color: rgba(0, 255, 157, 0.1);
+        }
+
+        .orderbook-row td {
+            position: relative;
+            z-index: 1;
+        }
+
+        .orderbook-side {
+            background-color: #1a1a1a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .orderbook-side h4 {
+            background-color: #2a2a2a;
+            color: #888;
+            margin: 0;
+            padding: 8px;
+            font-size: 12px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .orderbook-side h4:first-child {
+            color: #ff4d4d;
+        }
+
+        .orderbook-side h4:last-child {
+            color: #00ff9d;
+        }
+
+        .orderbook-table-container {
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .orderbook-title {
+            background-color: #2a2a2a;
+            color: #fff;
+            margin: 0;
+            padding: 12px;
+            font-size: 14px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+        }
+
+        .orderbook-content {
+            padding: 0;
+        }
+
+        .orderbook-row:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .orderbook-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border-radius: 4px;
+        }
+
+        .orderbook-select {
+            flex: 1;
+            padding: 8px;
+            background-color: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        .orderbook-select option {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -254,6 +531,93 @@
             <div class="status">
                 <div id="status-indicator" class="status-indicator disconnected"></div>
                 <span id="status-text">Disconnected</span>
+            </div>
+        </div>
+        
+        <div class="orderbook-tables-container">
+            <div class="orderbook-tables-row">
+                <div class="orderbook-table-container">
+                    <div class="orderbook-controls">
+                        <select class="orderbook-select" id="left-exchange-select">
+                            <option value="">Виберіть біржу</option>
+                        </select>
+                        <select class="orderbook-select" id="left-token-select">
+                            <option value="">Виберіть токен</option>
+                        </select>
+                    </div>
+                    <h3 class="orderbook-title">Orderbook Left (Left Click)</h3>
+                    <div class="orderbook-content">
+                        <div class="orderbook-row">
+                            <div class="orderbook-side">
+                                <h4>Sell</h4>
+                                <table class="orderbook-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Price</th>
+                                            <th>Amount</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderbook-left-sell"></tbody>
+                                </table>
+                            </div>
+                            <div class="orderbook-side">
+                                <h4>Buy</h4>
+                                <table class="orderbook-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Price</th>
+                                            <th>Amount</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderbook-left-buy"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="orderbook-table-container">
+                    <div class="orderbook-controls">
+                        <select class="orderbook-select" id="right-exchange-select">
+                            <option value="">Виберіть біржу</option>
+                        </select>
+                        <select class="orderbook-select" id="right-token-select">
+                            <option value="">Виберіть токен</option>
+                        </select>
+                    </div>
+                    <h3 class="orderbook-title">Orderbook Right (Right Click)</h3>
+                    <div class="orderbook-content">
+                        <div class="orderbook-row">
+                            <div class="orderbook-side">
+                                <h4>Sell</h4>
+                                <table class="orderbook-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Price</th>
+                                            <th>Amount</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderbook-right-sell"></tbody>
+                                </table>
+                            </div>
+                            <div class="orderbook-side">
+                                <h4>Buy</h4>
+                                <table class="orderbook-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Price</th>
+                                            <th>Amount</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orderbook-right-buy"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -474,6 +838,19 @@
                             best_sell,
                             best_buy
                         };
+                    }
+                    break;
+                    
+                case 'orderbook_data':
+                    const { token, exchange, sell_orders, buy_orders } = message;
+                    const isRightClick = document.querySelector('.orderbook-table-container:last-child').querySelector('.orderbook-title').textContent.includes(token);
+                    
+                    if (isRightClick) {
+                        fillOrderbookTable(document.getElementById('orderbook-right-sell'), sell_orders, true);
+                        fillOrderbookTable(document.getElementById('orderbook-right-buy'), buy_orders, false);
+                    } else {
+                        fillOrderbookTable(document.getElementById('orderbook-left-sell'), sell_orders, true);
+                        fillOrderbookTable(document.getElementById('orderbook-left-buy'), buy_orders, false);
                     }
                     break;
                     
@@ -836,6 +1213,209 @@
                 hasData: true
             };
         }
+
+        // Функція для оновлення заголовка таблиці ордербуку
+        function updateOrderbookTitle(container, token, exchange) {
+            const title = container.querySelector('.orderbook-title');
+            title.textContent = `${token} - ${exchange}`;
+        }
+
+        // Функція для заповнення таблиці ордербуку
+        function fillOrderbookTable(tbody, orders, isSell = true) {
+            tbody.innerHTML = '';
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3">Немає даних</td></tr>';
+                return;
+            }
+
+            // Розраховуємо максимальний об'єм для глибини
+            const maxVolume = orders.reduce((sum, order) => sum + parseFloat(order.total), 0);
+
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.className = `orderbook-row ${isSell ? 'sell' : 'buy'}`;
+                
+                // Розраховуємо глибину
+                const depth = (parseFloat(order.total) / maxVolume) * 100;
+                
+                row.innerHTML = `
+                    <td class="price">${order.price}</td>
+                    <td class="amount">${order.amount}</td>
+                    <td class="total">${order.total}</td>
+                    <div class="depth" style="width: ${depth}%"></div>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Функція для оновлення ордербуків
+        function updateOrderbooks(token, exchange, isRightClick = false) {
+            // Очищаємо всі таблиці
+            const allTbody = document.querySelectorAll('.orderbook-table tbody');
+            allTbody.forEach(tbody => {
+                tbody.innerHTML = '<tr><td colspan="3">Немає даних</td></tr>';
+            });
+
+            // Очищаємо всі заголовки
+            const allTitles = document.querySelectorAll('.orderbook-title');
+            allTitles.forEach(title => {
+                title.textContent = title.textContent.replace(/\(.*\)/, '');
+            });
+
+            // Визначаємо яку таблицю оновлювати
+            const targetContainer = isRightClick ? 
+                document.querySelector('.orderbook-table-container:last-child') : 
+                document.querySelector('.orderbook-table-container:first-child');
+
+            // Оновлюємо заголовок
+            const title = targetContainer.querySelector('.orderbook-title');
+            title.textContent = `Orderbook ${token} - ${exchange}`;
+
+            // Оновлюємо значення в комбобоксах
+            if (isRightClick) {
+                rightExchangeSelect.value = exchange;
+                rightTokenSelect.value = token;
+            } else {
+                leftExchangeSelect.value = exchange;
+                leftTokenSelect.value = token;
+            }
+
+            // Отримуємо дані з бекенду
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    action: 'get_orderbook',
+                    token: token,
+                    exchange: exchange
+                }));
+            }
+        }
+
+        // Додаємо обробники кліків до клітинок таблиці
+        document.addEventListener('DOMContentLoaded', function() {
+            const orderbookBody = document.getElementById('orderbook-body');
+            const leftExchangeSelect = document.getElementById('left-exchange-select');
+            const leftTokenSelect = document.getElementById('left-token-select');
+            const rightExchangeSelect = document.getElementById('right-exchange-select');
+            const rightTokenSelect = document.getElementById('right-token-select');
+            
+            orderbookBody.addEventListener('click', function(e) {
+                const cell = e.target.closest('td');
+                if (!cell) return;
+
+                const row = cell.closest('tr');
+                const tokenCell = row.querySelector('.token-cell');
+                
+                if (!tokenCell) return;
+
+                // Отримуємо токен і біржу з ID комірки
+                const cellId = cell.id;
+                const [token, exchange, type] = cellId.split('-');
+                
+                if (!token || !exchange) return;
+                
+                // Оновлюємо значення комбобоксів для лівої таблиці
+                leftExchangeSelect.value = exchange;
+                leftTokenSelect.value = token;
+                
+                updateOrderbooks(token, exchange, false);
+            });
+
+            orderbookBody.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                
+                const cell = e.target.closest('td');
+                if (!cell) return;
+
+                const row = cell.closest('tr');
+                const tokenCell = row.querySelector('.token-cell');
+                
+                if (!tokenCell) return;
+
+                // Отримуємо токен і біржу з ID комірки
+                const cellId = cell.id;
+                const [token, exchange, type] = cellId.split('-');
+                
+                if (!token || !exchange) return;
+                
+                // Оновлюємо значення комбобоксів для правої таблиці
+                rightExchangeSelect.value = exchange;
+                rightTokenSelect.value = token;
+                
+                updateOrderbooks(token, exchange, true);
+            });
+        });
+
+        // Додаємо обробники для комбобоксів
+        document.addEventListener('DOMContentLoaded', function() {
+            const leftExchangeSelect = document.getElementById('left-exchange-select');
+            const leftTokenSelect = document.getElementById('left-token-select');
+            const rightExchangeSelect = document.getElementById('right-exchange-select');
+            const rightTokenSelect = document.getElementById('right-token-select');
+
+            // Функція для оновлення списків бірж
+            function updateExchangeSelects() {
+                const exchangeOptions = exchanges.map(exchange => 
+                    `<option value="${exchange}">${exchange}</option>`
+                ).join('');
+                
+                leftExchangeSelect.innerHTML = '<option value="">Виберіть біржу</option>' + exchangeOptions;
+                rightExchangeSelect.innerHTML = '<option value="">Виберіть біржу</option>' + exchangeOptions;
+            }
+
+            // Функція для оновлення списків токенів
+            function updateTokenSelects() {
+                const tokenOptions = tokens.map(token => 
+                    `<option value="${token}">${token}</option>`
+                ).join('');
+                
+                leftTokenSelect.innerHTML = '<option value="">Виберіть токен</option>' + tokenOptions;
+                rightTokenSelect.innerHTML = '<option value="">Виберіть токен</option>' + tokenOptions;
+            }
+
+            // Оновлюємо списки при зміні даних
+            function updateSelects() {
+                updateExchangeSelects();
+                updateTokenSelects();
+            }
+
+            // Додаємо обробники подій для комбобоксів
+            leftExchangeSelect.addEventListener('change', function() {
+                const token = leftTokenSelect.value;
+                if (token && this.value) {
+                    updateOrderbooks(token, this.value, false);
+                }
+            });
+
+            leftTokenSelect.addEventListener('change', function() {
+                const exchange = leftExchangeSelect.value;
+                if (exchange && this.value) {
+                    updateOrderbooks(this.value, exchange, false);
+                }
+            });
+
+            rightExchangeSelect.addEventListener('change', function() {
+                const token = rightTokenSelect.value;
+                if (token && this.value) {
+                    updateOrderbooks(token, this.value, true);
+                }
+            });
+
+            rightTokenSelect.addEventListener('change', function() {
+                const exchange = rightExchangeSelect.value;
+                if (exchange && this.value) {
+                    updateOrderbooks(this.value, exchange, true);
+                }
+            });
+
+            // Оновлюємо списки при отриманні даних
+            const originalHandleMessage = handleMessage;
+            handleMessage = function(message) {
+                originalHandleMessage(message);
+                if (message.type === 'initial_data') {
+                    updateSelects();
+                }
+            };
+        });
     </script>
 </body>
 </html>

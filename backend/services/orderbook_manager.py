@@ -290,3 +290,26 @@ class OrderbookManager:
     def get_all_orderbooks(self) -> Dict[str, Dict[str, Dict[str, Any]]]:
         """Отримання всіх ордербуків."""
         return self.orderbooks
+
+    async def get_orderbook(self, token: str, exchange: str) -> Optional[Dict[str, List[Dict[str, str]]]]:
+        """Отримання даних ордербуку для конкретного токена на біржі."""
+        if exchange not in self.exchanges:
+            logger.error(f"Exchange {exchange} not found")
+            return None
+            
+        try:
+            # Отримуємо дані ордербуку від клієнта біржі
+            client = self.exchanges[exchange]
+            orderbook_data = await client.get_orderbook(token)
+            
+            if not orderbook_data:
+                return None
+                
+            return {
+                "sell_orders": orderbook_data.get('asks', []),
+                "buy_orders": orderbook_data.get('bids', [])
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting orderbook for {token} on {exchange}: {str(e)}")
+            return None
