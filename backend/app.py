@@ -175,8 +175,10 @@ async def process_client_message(websocket: WebSocket, message: str):
                     "type": "orderbook_data",
                     "token": token,
                     "exchange": exchange,
-                    "sell_orders": orderbook_data.get("sell_orders", []),
-                    "buy_orders": orderbook_data.get("buy_orders", [])
+                    "data": {
+                        "asks": orderbook_data.get("asks", []),
+                        "bids": orderbook_data.get("bids", [])
+                    }
                 }))
             else:
                 await websocket.send_text(json.dumps({

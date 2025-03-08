@@ -127,92 +127,60 @@ class TradeOgreClient(HttpExchangeClient):
                 # Для buy ордерів беремо тільки ті, що мають ненульову кількість
                 bids = [[float(price), float(amount)] for price, amount in data.get('buy', {}).items() if float(amount) > 0]
                 
+                # Сортуємо ордери
+                asks.sort(key=lambda x: float(x[0]))  # Сортування за зростанням ціни
+                bids.sort(key=lambda x: float(x[0]), reverse=True)  # Сортування за спаданням ціни
+                
                 logger.info(f"Converted orders - asks: {len(asks)}, bids: {len(bids)}")
                 if asks:
                     logger.info(f"Sample asks: {asks[:3]}")
+                    best_sell = asks[0][0]
+                else:
+                    best_sell = 'X X X'
+                    
                 if bids:
                     logger.info(f"Sample bids: {bids[:3]}")
+                    best_buy = bids[0][0]
+                else:
+                    best_buy = 'X X X'
+                    
+                return {
+                    'asks': asks,
+                    'bids': bids,
+                    'best_sell': str(best_sell),
+                    'best_buy': str(best_buy)
+                }
+                
             except Exception as e:
                 logger.error(f"Error converting order data: {str(e)}")
                 return None
-            
-            # Сортуємо ордери
-            asks.sort(key=lambda x: x[0])  # Сортування за зростанням ціни
-            bids.sort(key=lambda x: x[0], reverse=True)  # Сортування за спаданням ціни
-            
-            # Отримання найкращих цін
-            best_buy = None
-            best_sell = None
-            
-            if bids:
-                best_buy = bids[0][0]  # Перший ордер з відсортованих bids
-            if asks:
-                best_sell = asks[0][0]  # Перший ордер з відсортованих asks
                 
-            best_buy = best_buy if best_buy is not None else 'X X X'
-            best_sell = best_sell if best_sell is not None else 'X X X'
-            
-            logger.info(f"Received orderbook data for {symbol}: sell={best_sell}, buy={best_buy}")
-            
-            result = {
-                'best_sell': best_sell,
-                'best_buy': best_buy,
-                'asks': asks,
-                'bids': bids
-            }
-            logger.info(f"Final orderbook data: {result}")
-            return result
-            
         except Exception as e:
             logger.error(f"Error getting orderbook for {symbol} on TradeOgre: {str(e)}")
             return None
 
-    def get_best_prices(self, token: str, threshold: float = 5.0) -> Tuple[str, str]:
-        """Отримання найкращих цін для токена."""
+    def get_best_prices(self, token: str, threshold: float = 5.0) -> tuple:
         if token not in self.orderbooks:
             return "X X X", "X X X"
-            
         orderbook = self.orderbooks[token]
         asks = orderbook.get('asks', [])
         bids = orderbook.get('bids', [])
-        
         if not asks or not bids:
             return "X X X", "X X X"
-            
-        # Розрахунок кумулятивного обсягу
         cumulative_volume = 0
         best_sell = None
         best_buy = None
-        
         for ask in asks:
             price, volume = float(ask[0]), float(ask[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                # Форматування ціни залежно від її розміру
-                if price < 10:
-                    formatted_price = f"{price:,.12f}".replace(",", " ")
-                elif price < 100:
-                    formatted_price = f"{price:,.11f}".replace(",", " ")
-                else:
-                    formatted_price = f"{price:,.10f}".replace(",", " ")
-                
-                best_sell = formatted_price
+                best_sell = f"{price:.8f}"
                 break
-                
         cumulative_volume = 0
         for bid in bids:
             price, volume = float(bid[0]), float(bid[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                # Форматування ціни залежно від її розміру
-                if price < 10:
-                    formatted_price = f"{price:,.12f}".replace(",", " ")
-                elif price < 100:
-                    formatted_price = f"{price:,.11f}".replace(",", " ")
-                else:
-                    formatted_price = f"{price:,.10f}".replace(",", " ")
-                
-                best_buy = formatted_price
+                best_buy = f"{price:.8f}"
                 break
-                
         return best_sell or "X X X", best_buy or "X X X"
