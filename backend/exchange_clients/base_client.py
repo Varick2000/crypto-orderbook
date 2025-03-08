@@ -169,7 +169,7 @@ class BaseExchangeClient(abc.ABC):
             price, volume = float(ask[0]), float(ask[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                best_sell = self.format_price(price, volume)
+                best_sell = f"{price:.8f}"
                 break
                 
         cumulative_volume = 0
@@ -177,7 +177,7 @@ class BaseExchangeClient(abc.ABC):
             price, volume = float(bid[0]), float(bid[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                best_buy = self.format_price(price, volume)
+                best_buy = f"{price:.8f}"
                 break
                 
         return best_sell or "X X X", best_buy or "X X X"

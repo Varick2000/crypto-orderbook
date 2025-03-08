@@ -234,3 +234,15 @@ class WebSocketExchangeClient(BaseExchangeClient):
         Відправка ping-повідомлення для підтримки з'єднання.
         """
         raise NotImplementedError("This method must be implemented if ping is required")
+
+    def get_orderbook(self, token: str) -> Dict[str, List]:
+        """
+        Отримання поточного стану ордербуку для токена.
+        
+        Args:
+            token (str): Символ токена
+            
+        Returns:
+            Dict[str, List]: Словник з asks і bids
+        """
+        return self.orderbooks.get(token, {'asks': [], 'bids': []})

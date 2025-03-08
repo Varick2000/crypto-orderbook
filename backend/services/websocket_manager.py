@@ -91,16 +91,15 @@ class WebSocketManager:
                 # Якщо сталася помилка, можливо клієнт відключився
                 await self.disconnect(connection)
     
-    async def broadcast_orderbook_update(self, exchange: str, token: str, best_sell: float, best_buy: float):
-        """Відправка оновлення ордербука всім підписаним клієнтам"""
+    async def broadcast_orderbook_update(self, exchange: str, token: str, best_sell: str, best_buy: str):
+        """
+        Відправка оновлення ордербуку всім підписаним клієнтам.
+        """
         message = {
             "type": "orderbook_update",
-            "data": {
-                "exchange": exchange,
-                "token": token,
-                "best_sell": best_sell,
-                "best_buy": best_buy
-            }
+            "exchange": exchange,
+            "token": token,
+            "best_sell": best_sell,
+            "best_buy": best_buy
         }
-        logger.info(f"Broadcasting orderbook update: {message}")
         await self.broadcast(message)

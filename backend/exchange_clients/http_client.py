@@ -5,7 +5,7 @@ import asyncio
 import json
 import logging
 import time
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 
 import httpx
 
@@ -171,3 +171,58 @@ class HttpExchangeClient(BaseExchangeClient):
         """
         self.orderbooks[token] = {'asks': [], 'bids': []}
         logger.error(f"{self.name}: The method _fetch_and_process_orderbook must be implemented in derived classes")
+
+    async def get_orderbook(self, token: str) -> Dict[str, List]:
+        """
+        Отримання поточного стану ордербуку для токена.
+        
+        Args:
+            token (str): Символ токена
+            
+        Returns:
+            Dict[str, List]: Словник з asks і bids
+        """
+        return self.orderbooks.get(token, {'asks': [], 'bids': []})
+
+    def get_best_prices(self, token: str, threshold: float = 5.0) -> Tuple[str, str]:
+        """
+        Отримання найкращих цін для токена з урахуванням кумулятивного обсягу.
+        
+        Args:
+            token (str): Символ токена
+            threshold (float): Поріг кумулятивного обсягу
+            
+        Returns:
+            Tuple[str, str]: (best_sell, best_buy)
+        """
+        if token not in self.orderbooks:
+            return "X X X", "X X X"
+            
+        orderbook = self.orderbooks[token]
+        asks = orderbook.get('asks', [])
+        bids = orderbook.get('bids', [])
+        
+        if not asks or not bids:
+            return "X X X", "X X X"
+            
+        # Розрахунок кумулятивного обсягу
+        cumulative_volume = 0
+        best_sell = None
+        best_buy = None
+        
+        for ask in asks:
+            price, volume = float(ask[0]), float(ask[1])
+            cumulative_volume += volume * price
+            if cumulative_volume >= threshold:
+                best_sell = f"{price:.8f}"
+                break
+                
+        cumulative_volume = 0
+        for bid in bids:
+            price, volume = float(bid[0]), float(bid[1])
+            cumulative_volume += volume * price
+            if cumulative_volume >= threshold:
+                best_buy = f"{price:.8f}"
+                break
+                
+        return best_sell or "X X X", best_buy or "X X X"

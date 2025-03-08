@@ -306,8 +306,8 @@ class OrderbookManager:
                 return None
                 
             return {
-                "sell_orders": orderbook_data.get('asks', []),
-                "buy_orders": orderbook_data.get('bids', [])
+                "asks": orderbook_data.get('asks', []),
+                "bids": orderbook_data.get('bids', [])
             }
             
         except Exception as e:
