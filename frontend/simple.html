@@ -144,17 +144,17 @@
       background-color: #f3f4f6;
     }
     .sell-price {
-      color: #ef4444;
+      color: #ef4444 !important;
     }
     .buy-price {
-      color: #10b981;
+      color: #10b981 !important;
     }
     .highlight-green {
-      background-color: rgba(16, 185, 129, 0.2);
+      color: #10b981;
       font-weight: bold;
     }
     .highlight-red {
-      background-color: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
       font-weight: bold;
     }
     .opportunities {
@@ -323,10 +323,6 @@
     .orderbook-table tbody tr {
       position: relative;
     }
-    .orderbook-table tbody tr.sell {
-      color: #ef4444;
-      background-color: rgba(239, 68, 68, 0.05);
-    }
     .orderbook-table tbody tr.buy {
       color: #10b981;
       background-color: rgba(16, 185, 129, 0.05);
@@ -353,26 +349,11 @@
       overflow-y: auto;
       overflow-x: hidden;
     }
-    
-    /* Спеціальні стилі для sell ордерів */
-    .orderbook-side:first-child .orderbook-table tbody {
-      display: flex;
-      flex-direction: column-reverse;
-      max-height: calc(24px * 10);
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-    
-    .orderbook-side:first-child .orderbook-table tbody tr {
-      width: 100%;
-    }
-    
     .orderbook-table thead {
       display: table;
       width: 100%;
       table-layout: fixed;
     }
-    
     .orderbook-table tbody tr {
       display: table;
       width: 100%;
@@ -421,7 +402,6 @@
           <div class="orderbook-content">
             <div class="orderbook-row">
               <div class="orderbook-side">
-                <h4>Sell</h4>
                 <table class="orderbook-table">
                   <thead>
                     <tr>
@@ -435,7 +415,6 @@
                 </table>
               </div>
               <div class="orderbook-side">
-                <!-- <h4 style="color: #10b981;">Buy</h4> -->
                 <table class="orderbook-table">
                   <tbody id="orderbook-left-buy"></tbody>
                   <thead>
@@ -466,7 +445,6 @@
           <div class="orderbook-content">
             <div class="orderbook-row">
               <div class="orderbook-side">
-                <h4>Sell</h4>
                 <table class="orderbook-table">
                   <thead>
                     <tr>
@@ -480,7 +458,6 @@
                 </table>
               </div>
               <div class="orderbook-side">
-                <!-- <h4 style="color: #10b981;">Buy</h4> -->
                 <table class="orderbook-table">
                   <tbody id="orderbook-right-buy"></tbody>
                   <thead>
@@ -852,32 +829,52 @@
         // Очищаємо таблицю
         tbody.innerHTML = '';
 
-        // Для sell ордерів сортуємо за спаданням ціни (найвища зверху)
-        const displayOrders = isSell ? 
-            [...orders].sort((a, b) => parseFloat(b[0]) - parseFloat(a[0])) : 
-            orders;
+        // Для sell ордерів розвертаємо порядок відображення
+        const displayOrders = isSell ? orders.slice().reverse() : orders;
 
         // Розраховуємо загальний об'єм для глибини
         let totalVolume = 0;
-        
+        if (isSell) {
+            // Для sell ордерів рахуємо глибину з кінця
+            for (let i = displayOrders.length - 1; i >= 0; i--) {
+                const order = displayOrders[i];
+                totalVolume += parseFloat(order[1]) * parseFloat(order[0]);
+            }
+        } else {
+            displayOrders.forEach(order => {
+                totalVolume += parseFloat(order[1]) * parseFloat(order[0]);
+            });
+        }
+
+        console.log('Total volume:', totalVolume);
+
         // Заповнюємо таблицю
-        let currentVolume = 0;
+        let currentVolume = isSell ? totalVolume : 0;
         
         displayOrders.forEach(order => {
             const price = parseFloat(order[0]);
             const amount = parseFloat(order[1]);
             const total = price * amount;
             const row = document.createElement('tr');
-            row.className = isSell ? 'sell' : 'buy';
             
-            currentVolume += total;
-            
-            row.innerHTML = `
-                <td class="price">${price.toFixed(8)}</td>
-                <td class="amount">${amount.toFixed(8)}</td>
-                <td class="total">${total.toFixed(2)}</td>
-                <td class="depth">${currentVolume.toFixed(2)}</td>
-            `;
+            if (isSell) {
+                currentVolume -= total;
+                const depth = currentVolume + total; // Додаємо total, щоб показати правильну глибину для поточного рівня
+                row.innerHTML = `
+                    <td class="price sell-price">${price.toFixed(8)}</td>
+                    <td class="amount">${amount.toFixed(8)}</td>
+                    <td class="total">${total.toFixed(2)}</td>
+                    <td class="depth">${depth.toFixed(2)}</td>
+                `;
+            } else {
+                currentVolume += total;
+                row.innerHTML = `
+                    <td class="price buy-price">${price.toFixed(8)}</td>
+                    <td class="amount">${amount.toFixed(8)}</td>
+                    <td class="total">${total.toFixed(2)}</td>
+                    <td class="depth">${currentVolume.toFixed(2)}</td>
+                `;
+            }
 
             tbody.appendChild(row);
         });
@@ -886,6 +883,8 @@
         if (isSell) {
             tbody.scrollTop = tbody.scrollHeight;
         }
+
+        console.log('Table filled with orders');
     }
 
     // Функція для оновлення ордербуків

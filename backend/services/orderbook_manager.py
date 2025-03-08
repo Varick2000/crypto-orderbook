@@ -245,25 +245,38 @@ class OrderbookManager:
             for token in self.tokens:
                 try:
                     logger.info(f"Updating orderbook for {token} on {exchange_name}")
-                    best_sell, best_buy = client.get_best_prices(token)
-                    logger.info(f"Received orderbook data for {token} on {exchange_name}: sell={best_sell}, buy={best_buy}")
-                    
-                    if not self.orderbooks.get(token):
-                        self.orderbooks[token] = {}
-                    if not self.orderbooks[token].get(exchange_name):
-                        self.orderbooks[token][exchange_name] = {}
+                    orderbook = await client.get_orderbook(token)
+                    if orderbook:
+                        best_sell = orderbook.get('best_sell', 'X X X')
+                        best_buy = orderbook.get('best_buy', 'X X X')
+                        logger.info(f"Received orderbook data for {token} on {exchange_name}: sell={best_sell}, buy={best_buy}")
                         
-                    self.orderbooks[token][exchange_name] = {
-                        'best_sell': best_sell,
-                        'best_buy': best_buy
-                    }
-                    
-                    await self.websocket_manager.broadcast_orderbook_update(
-                        exchange_name,
-                        token,
-                        best_sell,
-                        best_buy
-                    )
+                        # Оновлюємо дані в ордербуці
+                        if token not in self.orderbooks:
+                            self.orderbooks[token] = {}
+                        if exchange_name not in self.orderbooks[token]:
+                            self.orderbooks[token][exchange_name] = {}
+                            
+                        self.orderbooks[token][exchange_name] = {
+                            'best_sell': best_sell,
+                            'best_buy': best_buy,
+                            'asks': orderbook.get('asks', []),
+                            'bids': orderbook.get('bids', [])
+                        }
+                        self.last_update_time[token][exchange_name] = time.time()
+                        
+                        # Відправляємо оновлення клієнтам
+                        await self.websocket_manager.broadcast({
+                            "type": "orderbook_update",
+                            "exchange": exchange_name,
+                            "token": token,
+                            "best_sell": best_sell,
+                            "best_buy": best_buy,
+                            "asks": orderbook.get('asks', []),
+                            "bids": orderbook.get('bids', [])
+                        })
+                    else:
+                        logger.warning(f"No orderbook data received for {token} on {exchange_name}")
                 except Exception as e:
                     logger.error(f"Error updating orderbook for {token} on {exchange_name}: {str(e)}")
     

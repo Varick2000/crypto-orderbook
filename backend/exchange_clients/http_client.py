@@ -123,16 +123,19 @@ class HttpExchangeClient(BaseExchangeClient):
             while self.is_connected:
                 try:
                     # Отримання і обробка даних ордербуку
-                    await self._fetch_and_process_orderbook(token)
-                    
-                    # Оновлення часу останнього оновлення
-                    self.last_update_time[token] = time.time()
-                    
+                    orderbook = await self.get_orderbook(token)
+                    if orderbook:
+                        self.orderbooks[token] = orderbook
+                        self.last_update_time[token] = time.time()
+                        logger.info(f"{self.name}: Updated orderbook for {token}")
+                    else:
+                        logger.warning(f"{self.name}: No orderbook data received for {token}")
+                        
                 except Exception as e:
                     logger.error(f"{self.name}: Error polling orderbook for {token}: {str(e)}")
                     # Очищення ордербуку при помилці
                     if token in self.orderbooks:
-                        self.orderbooks[token] = {'asks': [], 'bids': []}
+                        self.orderbooks[token] = {'asks': [], 'bids': [], 'best_sell': 'X X X', 'best_buy': 'X X X'}
                 
                 # Очікування перед наступним запитом
                 await asyncio.sleep(self.polling_interval)

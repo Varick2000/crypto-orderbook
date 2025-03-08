@@ -134,18 +134,27 @@ class TradeOgreClient(HttpExchangeClient):
                 logger.info(f"Converted orders - asks: {len(asks)}, bids: {len(bids)}")
                 if asks:
                     logger.info(f"Sample asks: {asks[:3]}")
+                    best_sell = asks[0][0]
+                else:
+                    best_sell = 'X X X'
+                    
                 if bids:
                     logger.info(f"Sample bids: {bids[:3]}")
+                    best_buy = bids[0][0]
+                else:
+                    best_buy = 'X X X'
                     
                 return {
                     'asks': asks,
-                    'bids': bids
+                    'bids': bids,
+                    'best_sell': str(best_sell),
+                    'best_buy': str(best_buy)
                 }
                 
             except Exception as e:
                 logger.error(f"Error converting order data: {str(e)}")
                 return None
-            
+                
         except Exception as e:
             logger.error(f"Error getting orderbook for {symbol} on TradeOgre: {str(e)}")
             return None
