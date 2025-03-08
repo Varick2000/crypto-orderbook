@@ -580,6 +580,105 @@
       text-align: center;
       font-weight: 500;
     }
+
+    .token-input {
+      padding: 8px 12px;
+      background-color: #333333;
+      border: 1px solid #444444;
+      border-radius: 6px;
+      color: #ffffff;
+      font-size: 14px;
+      min-width: 300px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    
+    .token-input:focus {
+      border-color: #3b82f6;
+    }
+    
+    .light-theme .token-input {
+      background-color: #ffffff;
+      border-color: #e5e7eb;
+      color: #374151;
+    }
+    
+    .light-theme .token-input:focus {
+      border-color: #3b82f6;
+    }
+
+    .add-token-btn {
+      background-color: #10b981;
+      padding: 8px 16px;
+    }
+    
+    .add-token-btn:hover {
+      background-color: #059669;
+    }
+    
+    .remove-token-btn {
+      background-color: #ef4444;
+      padding: 8px 16px;
+    }
+    
+    .remove-token-btn:hover {
+      background-color: #dc2626;
+    }
+
+    /* Стилі для спливаючих повідомлень */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .toast {
+      background-color: #333333;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .toast.success {
+      background-color: #10b981;
+    }
+
+    .toast.error {
+      background-color: #ef4444;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .light-theme .toast {
+      background-color: #ffffff;
+      color: #333333;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .light-theme .toast.success {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+
+    .light-theme .toast.error {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
   </style>
 </head>
 <body>
@@ -718,12 +817,16 @@
     </div>
     <div class="controls">
       <div class="control-group">
-        <button id="refresh-btn" class="refresh-btn">Refresh Data</button>
-        <button id="find-arb-btn" class="arb-btn">Find Arbitrage</button>
+        <input type="text" id="token-input" class="token-input" placeholder="Введіть назву токена для пошуку або додавання..." pattern="[A-Za-z0-9]+" title="Тільки літери англійського алфавіту та цифри">
+        <button id="search-btn" class="search-btn">Пошук</button>
+        <button id="add-token-btn" class="add-token-btn">Додати токен</button>
+        <button id="remove-token-btn" class="remove-token-btn">Видалити токен</button>
+        <button id="refresh-btn" class="refresh-btn">Оновити дані</button>
+        <button id="find-arb-btn" class="arb-btn">Знайти арбітраж</button>
       </div>
       <div>
         <select id="token-filter">
-          <option value="all">All Tokens</option>
+          <option value="all">Всі токени</option>
         </select>
       </div>
     </div>
@@ -746,6 +849,7 @@
       <div id="opportunities-list"></div>
     </div>
   </div>
+  <div class="toast-container" id="toastContainer"></div>
 
   <script>
     // WebSocket URL
@@ -912,11 +1016,13 @@
           tokens.push(message.token);
           updateTokenFilter();
           renderTable();
+          showToast(`Токен ${message.token} успішно додано`, 'success');
           break;
         case 'token_removed':
           tokens = tokens.filter(t => t !== message.token);
           updateTokenFilter();
           renderTable();
+          showToast(`Токен ${message.token} успішно видалено`, 'success');
           break;
         case 'exchange_added':
           exchanges.push(message.exchange.name);
@@ -936,6 +1042,7 @@
           break;
         case 'error':
           console.error('Server error:', message.message);
+          showToast(message.message, 'error');
           break;
         default:
           console.warn('Unknown message type:', type);
@@ -1275,6 +1382,104 @@
       } else {
         themeIcon.textContent = '☀️';
         themeText.textContent = 'Світла тема';
+      }
+    });
+
+    // Додаємо обробник для поля вводу та кнопки пошуку
+    const tokenInput = document.getElementById('token-input');
+    const searchBtn = document.getElementById('search-btn');
+
+    // Пошук при введенні
+    tokenInput.addEventListener('input', function() {
+      const searchTerm = this.value.trim().toUpperCase();
+      filterTable(searchTerm);
+    });
+
+    // Пошук по кнопці
+    searchBtn.addEventListener('click', function() {
+      const searchTerm = tokenInput.value.trim().toUpperCase();
+      filterTable(searchTerm);
+    });
+
+    // Функція фільтрації таблиці
+    function filterTable(searchTerm) {
+      const rows = document.querySelectorAll('#orderbook-body tr');
+      
+      rows.forEach(row => {
+        const tokenCell = row.querySelector('.token-cell');
+        if (!tokenCell) return;
+        
+        const token = tokenCell.textContent;
+        const shouldShow = token.includes(searchTerm);
+        
+        const nextRow = row.nextElementSibling;
+        
+        if (shouldShow) {
+          row.style.display = '';
+          if (nextRow) nextRow.style.display = '';
+          row.classList.add('highlight-row');
+          if (nextRow) nextRow.classList.add('highlight-row');
+        } else {
+          row.style.display = 'none';
+          if (nextRow) nextRow.style.display = 'none';
+          row.classList.remove('highlight-row');
+          if (nextRow) nextRow.classList.remove('highlight-row');
+        }
+      });
+    }
+
+    // Функція для показу спливаючих повідомлень
+    function showToast(message, type = 'success') {
+      const toastContainer = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      
+      toastContainer.appendChild(toast);
+      
+      // Видаляємо повідомлення через 3 секунди
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+          toastContainer.removeChild(toast);
+        }, 300);
+      }, 3000);
+    }
+
+    // Функція для відправки повідомлень через WebSocket
+    function sendMessage(message) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(message));
+        return true;
+      }
+      showToast('Немає з\'єднання з сервером', 'error');
+      return false;
+    }
+
+    // Оновлюємо обробник для кнопки додавання токену
+    document.getElementById('add-token-btn').addEventListener('click', function() {
+      const newToken = tokenInput.value.trim().toUpperCase();
+      
+      if (!newToken) {
+        showToast('Будь ласка, введіть назву токену', 'error');
+        return;
+      }
+      
+      if (!/^[A-Z0-9]+$/.test(newToken)) {
+        showToast('Назва токену повинна містити тільки літери англійського алфавіту та цифри', 'error');
+        return;
+      }
+      
+      if (tokens.includes(newToken)) {
+        showToast('Цей токен вже додано', 'error');
+        return;
+      }
+      
+      if (sendMessage({
+        action: 'add_token',
+        token: newToken
+      })) {
+        tokenInput.value = '';
       }
     });
 
