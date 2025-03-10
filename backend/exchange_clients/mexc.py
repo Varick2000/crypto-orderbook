@@ -94,6 +94,40 @@ class MEXCClient(BaseExchangeClient):
                 if response_data and 'bids' in response_data and 'asks' in response_data:
                     best_buy = float(response_data['bids'][0][0]) if response_data['bids'] else 'X X X'
                     best_sell = float(response_data['asks'][0][0]) if response_data['asks'] else 'X X X'
+                    
+                    # Форматуємо ціни в залежності від їх значення
+                    if best_buy != 'X X X':
+                        if best_buy >= 1000:
+                            best_buy = f"{best_buy:.2f}"
+                        elif best_buy >= 100:
+                            best_buy = f"{best_buy:.3f}"
+                        elif best_buy >= 10:
+                            best_buy = f"{best_buy:.4f}"
+                        elif best_buy >= 1:
+                            best_buy = f"{best_buy:.5f}"
+                        elif best_buy >= 0.1:
+                            best_buy = f"{best_buy:.6f}"
+                        elif best_buy >= 0.01:
+                            best_buy = f"{best_buy:.7f}"
+                        else:
+                            best_buy = f"{best_buy:.8f}"
+                            
+                    if best_sell != 'X X X':
+                        if best_sell >= 1000:
+                            best_sell = f"{best_sell:.2f}"
+                        elif best_sell >= 100:
+                            best_sell = f"{best_sell:.3f}"
+                        elif best_sell >= 10:
+                            best_sell = f"{best_sell:.4f}"
+                        elif best_sell >= 1:
+                            best_sell = f"{best_sell:.5f}"
+                        elif best_sell >= 0.1:
+                            best_sell = f"{best_sell:.6f}"
+                        elif best_sell >= 0.01:
+                            best_sell = f"{best_sell:.7f}"
+                        else:
+                            best_sell = f"{best_sell:.8f}"
+                    
                     logger.info(f"Received orderbook data for {symbol}: sell={best_sell}, buy={best_buy}")
                     return {
                         'best_sell': best_sell,
@@ -226,14 +260,42 @@ class MEXCClient(BaseExchangeClient):
             price, volume = float(ask[0]), float(ask[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                best_sell = f"{price:.8f}"
+                # Форматуємо ціну в залежності від її значення
+                if price >= 1000:
+                    best_sell = f"{price:.2f}"
+                elif price >= 100:
+                    best_sell = f"{price:.3f}"
+                elif price >= 10:
+                    best_sell = f"{price:.4f}"
+                elif price >= 1:
+                    best_sell = f"{price:.5f}"
+                elif price >= 0.1:
+                    best_sell = f"{price:.6f}"
+                elif price >= 0.01:
+                    best_sell = f"{price:.7f}"
+                else:
+                    best_sell = f"{price:.8f}"
                 break
         cumulative_volume = 0
         for bid in bids:
             price, volume = float(bid[0]), float(bid[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                best_buy = f"{price:.8f}"
+                # Форматуємо ціну в залежності від її значення
+                if price >= 1000:
+                    best_buy = f"{price:.2f}"
+                elif price >= 100:
+                    best_buy = f"{price:.3f}"
+                elif price >= 10:
+                    best_buy = f"{price:.4f}"
+                elif price >= 1:
+                    best_buy = f"{price:.5f}"
+                elif price >= 0.1:
+                    best_buy = f"{price:.6f}"
+                elif price >= 0.01:
+                    best_buy = f"{price:.7f}"
+                else:
+                    best_buy = f"{price:.8f}"
                 break
         return best_sell or "X X X", best_buy or "X X X"
 

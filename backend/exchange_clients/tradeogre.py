@@ -134,21 +134,51 @@ class TradeOgreClient(HttpExchangeClient):
                 logger.info(f"Converted orders - asks: {len(asks)}, bids: {len(bids)}")
                 if asks:
                     logger.info(f"Sample asks: {asks[:3]}")
-                    best_sell = asks[0][0]
+                    best_sell = float(asks[0][0])
+                    # Форматуємо ціну в залежності від її значення
+                    if best_sell >= 1000:
+                        best_sell = f"{best_sell:.2f}"
+                    elif best_sell >= 100:
+                        best_sell = f"{best_sell:.3f}"
+                    elif best_sell >= 10:
+                        best_sell = f"{best_sell:.4f}"
+                    elif best_sell >= 1:
+                        best_sell = f"{best_sell:.5f}"
+                    elif best_sell >= 0.1:
+                        best_sell = f"{best_sell:.6f}"
+                    elif best_sell >= 0.01:
+                        best_sell = f"{best_sell:.7f}"
+                    else:
+                        best_sell = f"{best_sell:.8f}"
                 else:
                     best_sell = 'X X X'
                     
                 if bids:
                     logger.info(f"Sample bids: {bids[:3]}")
-                    best_buy = bids[0][0]
+                    best_buy = float(bids[0][0])
+                    # Форматуємо ціну в залежності від її значення
+                    if best_buy >= 1000:
+                        best_buy = f"{best_buy:.2f}"
+                    elif best_buy >= 100:
+                        best_buy = f"{best_buy:.3f}"
+                    elif best_buy >= 10:
+                        best_buy = f"{best_buy:.4f}"
+                    elif best_buy >= 1:
+                        best_buy = f"{best_buy:.5f}"
+                    elif best_buy >= 0.1:
+                        best_buy = f"{best_buy:.6f}"
+                    elif best_buy >= 0.01:
+                        best_buy = f"{best_buy:.7f}"
+                    else:
+                        best_buy = f"{best_buy:.8f}"
                 else:
                     best_buy = 'X X X'
                     
                 return {
                     'asks': asks,
                     'bids': bids,
-                    'best_sell': str(best_sell),
-                    'best_buy': str(best_buy)
+                    'best_sell': best_sell,
+                    'best_buy': best_buy
                 }
                 
             except Exception as e:
@@ -174,13 +204,41 @@ class TradeOgreClient(HttpExchangeClient):
             price, volume = float(ask[0]), float(ask[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                best_sell = f"{price:.8f}"
+                # Форматуємо ціну в залежності від її значення
+                if price >= 1000:
+                    best_sell = f"{price:.2f}"
+                elif price >= 100:
+                    best_sell = f"{price:.3f}"
+                elif price >= 10:
+                    best_sell = f"{price:.4f}"
+                elif price >= 1:
+                    best_sell = f"{price:.5f}"
+                elif price >= 0.1:
+                    best_sell = f"{price:.6f}"
+                elif price >= 0.01:
+                    best_sell = f"{price:.7f}"
+                else:
+                    best_sell = f"{price:.8f}"
                 break
         cumulative_volume = 0
         for bid in bids:
             price, volume = float(bid[0]), float(bid[1])
             cumulative_volume += volume * price
             if cumulative_volume >= threshold:
-                best_buy = f"{price:.8f}"
+                # Форматуємо ціну в залежності від її значення
+                if price >= 1000:
+                    best_buy = f"{price:.2f}"
+                elif price >= 100:
+                    best_buy = f"{price:.3f}"
+                elif price >= 10:
+                    best_buy = f"{price:.4f}"
+                elif price >= 1:
+                    best_buy = f"{price:.5f}"
+                elif price >= 0.1:
+                    best_buy = f"{price:.6f}"
+                elif price >= 0.01:
+                    best_buy = f"{price:.7f}"
+                else:
+                    best_buy = f"{price:.8f}"
                 break
         return best_sell or "X X X", best_buy or "X X X"
