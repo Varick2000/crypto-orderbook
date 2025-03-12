@@ -974,11 +974,6 @@
           <button id="refresh-btn" class="refresh-btn">Оновити дані</button>
           <button id="find-arb-btn" class="arb-btn">Знайти арбітраж</button>
         </div>
-        <div>
-          <select id="token-filter" class="token-filter">
-            <option value="all">Всі токени</option>
-          </select>
-        </div>
       </div>
     </div>
     <div class="table-caption" style="text-align: left; margin: 20px 0 10px 0;">Таблиця 5 (orderbook-table)</div>
@@ -1029,7 +1024,6 @@
     const deltaValueText = document.getElementById('delta-value');
     const refreshButton = document.getElementById('refresh-btn');
     const findArbButton = document.getElementById('find-arb-btn');
-    const tokenFilter = document.getElementById('token-filter');
     const opportunitiesSection = document.getElementById('opportunities');
     const opportunitiesList = document.getElementById('opportunities-list');
 
@@ -1042,29 +1036,23 @@
     percentThresholdInput.addEventListener('input', function() {
       const newValue = parseFloat(this.value);
       if (!isNaN(newValue)) {
-        const thresholds = {
-          percentThreshold: newValue,
-          deltaThreshold: 0.5
-        };
+        percentValueText.textContent = newValue.toFixed(1);
         renderTable();
       }
     });
+    
     deltaThresholdInput.addEventListener('input', function() {
       const newValue = parseFloat(this.value);
       if (!isNaN(newValue)) {
-        const thresholds = {
-          percentThreshold: 2.0,
-          deltaThreshold: newValue
-        };
+        deltaValueText.textContent = newValue.toFixed(1);
         renderTable();
       }
     });
-    tokenFilter.addEventListener('change', function() {
-      renderTable();
-    });
+    
     refreshButton.addEventListener('click', function() {
       refreshPrices();
     });
+    
     findArbButton.addEventListener('click', function() {
       findArbitrageOpportunities();
     });
@@ -1212,17 +1200,7 @@
     }
 
     function updateTokenFilter() {
-      const currentValue = tokenFilter.value;
-      tokenFilter.innerHTML = '<option value="all">All Tokens</option>';
-      tokens.forEach(token => {
-        const option = document.createElement('option');
-        option.value = token;
-        option.textContent = token;
-        tokenFilter.appendChild(option);
-      });
-      if (currentValue !== 'all' && tokens.includes(currentValue)) {
-        tokenFilter.value = currentValue;
-      }
+      renderTable();
     }
 
     function updateOrderbook(data) {
@@ -1283,11 +1261,7 @@
         tokenHeader.setAttribute('data-sort-icon', isAscending ? '↑' : '↓');
       }
       
-      const filterValue = tokenFilter.value;
-      const filteredTokens = filterValue === 'all' ? tokens : [filterValue];
-      
-      // Сортуємо токени
-      const sortedTokens = [...filteredTokens].sort((a, b) => {
+      const sortedTokens = [...tokens].sort((a, b) => {
         return isAscending ? a.localeCompare(b) : b.localeCompare(a);
       });
       
@@ -1325,8 +1299,7 @@
 
     // Оновлення таблиці ордербуку (створення рядків)
     function renderTable() {
-      const filterValue = tokenFilter.value;
-      const filteredTokens = filterValue === 'all' ? tokens : [filterValue];
+      const filteredTokens = tokens;
       
       const exchangesHeader = document.getElementById('exchanges-header');
       const headerRow = exchangesHeader.parentElement;
@@ -1336,7 +1309,7 @@
         ${exchanges.map(exchange => `<th>${exchange}</th>`).join('')}
       `;
       
-      window.handleSort(); // Викликаємо сортування одразу після рендерингу
+      window.handleSort();
     }
 
     // Функція для заповнення таблиці ордербуку
