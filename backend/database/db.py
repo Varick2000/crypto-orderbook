@@ -23,7 +23,7 @@ async def init_db():
     logger.info("Initializing database...")
     
     async with aiosqlite.connect(DB_PATH) as db:
-        # Створення таблиць
+        # Створення таблиць, якщо вони не існують
         await db.execute('''
         CREATE TABLE IF NOT EXISTS tokens (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,26 +43,39 @@ async def init_db():
         
         await db.commit()
         
-        # Очищаємо таблиці
-        await db.execute('DELETE FROM tokens')
-        await db.execute('DELETE FROM exchanges')
+        # Перевіряємо чи є вже якісь токени в базі
+        cursor = await db.execute('SELECT COUNT(*) FROM tokens')
+        token_count = await cursor.fetchone()
         
-        # Додавання токенів
-        for token in TOKENS:
-            await db.execute('INSERT INTO tokens (symbol) VALUES (?)', (token,))
-            logger.info(f"Added token: {token}")
+        # Додаємо початкові токени тільки якщо таблиця порожня
+        if token_count[0] == 0:
+            logger.info("Adding initial tokens...")
+            for token in TOKENS:
+                try:
+                    await db.execute('INSERT INTO tokens (symbol) VALUES (?)', (token,))
+                    logger.info(f"Added token: {token}")
+                except aiosqlite.IntegrityError:
+                    logger.info(f"Token {token} already exists")
         
-        # Додавання бірж
-        for exchange in EXCHANGES:
-            config_json = json.dumps(exchange.get('config', {}))
-            await db.execute(
-                'INSERT INTO exchanges (name, url, type, config) VALUES (?, ?, ?, ?)',
-                (exchange['name'], exchange['url'], exchange['type'], config_json)
-            )
-            logger.info(f"Added exchange: {exchange['name']}")
+        # Перевіряємо чи є вже біржі в базі
+        cursor = await db.execute('SELECT COUNT(*) FROM exchanges')
+        exchange_count = await cursor.fetchone()
+        
+        # Додаємо біржі тільки якщо таблиця порожня
+        if exchange_count[0] == 0:
+            logger.info("Adding initial exchanges...")
+            for exchange in EXCHANGES:
+                try:
+                    config_json = json.dumps(exchange.get('config', {}))
+                    await db.execute(
+                        'INSERT INTO exchanges (name, url, type, config) VALUES (?, ?, ?, ?)',
+                        (exchange['name'], exchange['url'], exchange['type'], config_json)
+                    )
+                    logger.info(f"Added exchange: {exchange['name']}")
+                except aiosqlite.IntegrityError:
+                    logger.info(f"Exchange {exchange['name']} already exists")
         
         await db.commit()
-        logger.info("Database initialized with default data")
 
 
 async def get_tokens() -> List[str]:
