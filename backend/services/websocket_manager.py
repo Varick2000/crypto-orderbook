@@ -23,6 +23,14 @@ class WebSocketManager:
         # Підписки клієнтів на токени та біржі
         # {client_id: {'tokens': ['BTC', 'ETH'], 'exchanges': ['MEXC', 'CoinEx']}}
         self.subscriptions: Dict[int, Dict[str, List[str]]] = {}
+        
+        # Статистика відправки повідомлень
+        self.stats = {
+            'total_messages': 0,
+            'successful_sends': 0,
+            'failed_sends': 0,
+            'success_rate': 0
+        }
     
     async def connect(self, websocket: WebSocket):
         """
@@ -80,16 +88,57 @@ class WebSocketManager:
         await websocket.send_text(json.dumps(message))
     
     async def broadcast(self, message: Dict[str, Any]):
-        """
-        Надіслати повідомлення всім підключеним клієнтам.
-        """
+        """Відправка повідомлення всім підключеним клієнтам"""
+        if not self.active_connections:
+            logger.warning("Немає активних підключень для відправки оновлення")
+            return
+       
+        # Додаємо додаткове логування для відстеження оновлень CoinEx
+        if message.get("type") == "orderbook_update" and message.get("exchange") == "CoinEx":
+            logger.info(f"WebSocketManager: відправка оновлення CoinEx для {message.get('token')}: sell={message.get('best_sell')}, buy={message.get('best_buy')}")
+        
+        # Формуємо JSON-рядок для відправки один раз
+        try:
+            message_json = json.dumps(message)
+        except Exception as e:
+            logger.error(f"Error serializing message to JSON: {str(e)}")
+            return
+       
+        # Відправляємо повідомлення всім клієнтам
+        successful_sends = 0
+        failures = 0
+        failed_connections = []
+        
         for connection in self.active_connections:
             try:
-                await connection.send_text(json.dumps(message))
+                await connection.send_text(message_json)
+                successful_sends += 1
             except Exception as e:
-                logger.error(f"Error sending message to client {id(connection)}: {str(e)}")
-                # Якщо сталася помилка, можливо клієнт відключився
+                failures += 1
+                failed_connections.append(connection)
+                logger.error(f"Error sending message to client: {str(e)}")
+            
+        # Логуємо результат відправки
+        if message.get("type") == "orderbook_update":
+            logger.info(f"Broadcast result: {successful_sends} successful, {failures} failed")
+        
+        # Відключаємо клієнтів з помилками
+        for connection in failed_connections:
+            try:
                 await self.disconnect(connection)
+                logger.info("Successfully disconnected failed client")
+            except Exception as e:
+                logger.error(f"Error disconnecting client: {str(e)}")
+            
+        # Оновлюємо статистику
+        self._update_stats(successful_sends, failures)
+    
+    def _update_stats(self, successful_sends: int, failures: int):
+        """Оновлення статистики відправки повідомлень"""
+        self.stats['total_messages'] += successful_sends + failures
+        self.stats['successful_sends'] += successful_sends
+        self.stats['failed_sends'] += failures
+        self.stats['success_rate'] = (self.stats['successful_sends'] / self.stats['total_messages'] * 100) if self.stats['total_messages'] > 0 else 0
     
     async def broadcast_orderbook_update(self, exchange: str, token: str, best_sell: str, best_buy: str):
         """

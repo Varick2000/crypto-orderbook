@@ -155,12 +155,10 @@
       color: #10b981 !important;
     }
     .highlight-green {
-      color: #10b981;
-      font-weight: bold;
+      background-color: rgba(16, 185, 129, 0.1);
     }
     .highlight-red {
-      color: #ef4444;
-      font-weight: bold;
+      background-color: rgba(239, 68, 68, 0.1);
     }
     .opportunities {
       margin-top: 30px;
@@ -336,9 +334,11 @@
     .orderbook-table tbody tr {
       position: relative;
     }
+    .orderbook-table tbody tr.sell {
+      color: #ef4444;
+    }
     .orderbook-table tbody tr.buy {
       color: #10b981;
-      background-color: rgba(16, 185, 129, 0.05);
     }
     .orderbook-table tbody tr:hover {
       background-color: rgba(0,0,0,0.02);
@@ -1165,60 +1165,57 @@
         // Очищаємо таблицю
         tbody.innerHTML = '';
 
-        // Для sell ордерів розвертаємо порядок відображення
-        const displayOrders = isSell ? orders.slice().reverse() : orders;
+        // Сортуємо ордери
+        const sortedOrders = [...orders].sort((a, b) => {
+            const priceA = parseFloat(a[0]);
+            const priceB = parseFloat(b[0]);
+            return isSell ? priceB - priceA : priceA - priceB;
+        });
+
+        // Якщо це бай ордери, реверсуємо масив
+        if (!isSell) {
+            sortedOrders.reverse();
+        }
+
+        console.log('Sorted orders:', sortedOrders);
 
         // Розраховуємо загальний об'єм для глибини
         let totalVolume = 0;
-        if (isSell) {
-            // Для sell ордерів рахуємо глибину з кінця
-            for (let i = displayOrders.length - 1; i >= 0; i--) {
-                const order = displayOrders[i];
-                totalVolume += parseFloat(order[1]) * parseFloat(order[0]);
-            }
-        } else {
-            displayOrders.forEach(order => {
-                totalVolume += parseFloat(order[1]) * parseFloat(order[0]);
-            });
-        }
+        sortedOrders.forEach(order => {
+            totalVolume += parseFloat(order[1]) * parseFloat(order[0]);
+        });
 
         console.log('Total volume:', totalVolume);
 
         // Заповнюємо таблицю
-        let currentVolume = isSell ? totalVolume : 0;
-        
-        displayOrders.forEach(order => {
+        let currentVolume = 0;
+        sortedOrders.forEach(order => {
             const price = parseFloat(order[0]);
             const amount = parseFloat(order[1]);
             const total = price * amount;
+            currentVolume += total;
+
+            // Визначаємо кількість знаків після коми для ціни
+            let priceDecimals = 8;
+            if (price >= 1000) priceDecimals = 2;
+            else if (price >= 100) priceDecimals = 3;
+            else if (price >= 10) priceDecimals = 4;
+            else if (price >= 1) priceDecimals = 5;
+            else if (price >= 0.1) priceDecimals = 6;
+            else if (price >= 0.01) priceDecimals = 7;
+
             const row = document.createElement('tr');
-            
-            if (isSell) {
-                currentVolume -= total;
-                const depth = currentVolume + total; // Додаємо total, щоб показати правильну глибину для поточного рівня
-                row.innerHTML = `
-                    <td class="price sell-price">${price.toFixed(8)}</td>
-                    <td class="amount">${amount.toFixed(8)}</td>
-                    <td class="total">${total.toFixed(2)}</td>
-                    <td class="depth">${depth.toFixed(2)}</td>
-                `;
-            } else {
-                currentVolume += total;
-                row.innerHTML = `
-                    <td class="price buy-price">${price.toFixed(8)}</td>
-                    <td class="amount">${amount.toFixed(8)}</td>
-                    <td class="total">${total.toFixed(2)}</td>
-                    <td class="depth">${currentVolume.toFixed(2)}</td>
-                `;
-            }
+            row.className = isSell ? 'sell' : 'buy';
+
+            row.innerHTML = `
+                <td class="${isSell ? 'sell-price' : 'buy-price'}">${price.toFixed(priceDecimals)}</td>
+                <td class="amount">${amount.toFixed(8)}</td>
+                <td class="total">${total.toFixed(2)}</td>
+                <td class="depth">${currentVolume.toFixed(2)}</td>
+            `;
 
             tbody.appendChild(row);
         });
-
-        // Якщо це sell ордери, прокручуємо до низу
-        if (isSell) {
-            tbody.scrollTop = tbody.scrollHeight;
-        }
 
         console.log('Table filled with orders');
     }

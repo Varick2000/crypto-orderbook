@@ -20,8 +20,7 @@ async def init_db():
     """
     Ініціалізація бази даних, створення таблиць та заповнення початковими даними.
     """
-    # Перевірка чи існує БД
-    db_exists = os.path.exists(DB_PATH)
+    logger.info("Initializing database...")
     
     async with aiosqlite.connect(DB_PATH) as db:
         # Створення таблиць
@@ -44,22 +43,26 @@ async def init_db():
         
         await db.commit()
         
-        # Якщо БД не існувала, заповнюємо початковими даними
-        if not db_exists:
-            # Додавання токенів
-            for token in TOKENS:
-                await db.execute('INSERT OR IGNORE INTO tokens (symbol) VALUES (?)', (token,))
-            
-            # Додавання бірж
-            for exchange in EXCHANGES:
-                config_json = json.dumps(exchange.get('config', {}))
-                await db.execute(
-                    'INSERT OR IGNORE INTO exchanges (name, url, type, config) VALUES (?, ?, ?, ?)',
-                    (exchange['name'], exchange['url'], exchange['type'], config_json)
-                )
-            
-            await db.commit()
-            logger.info("Database initialized with default data")
+        # Очищаємо таблиці
+        await db.execute('DELETE FROM tokens')
+        await db.execute('DELETE FROM exchanges')
+        
+        # Додавання токенів
+        for token in TOKENS:
+            await db.execute('INSERT INTO tokens (symbol) VALUES (?)', (token,))
+            logger.info(f"Added token: {token}")
+        
+        # Додавання бірж
+        for exchange in EXCHANGES:
+            config_json = json.dumps(exchange.get('config', {}))
+            await db.execute(
+                'INSERT INTO exchanges (name, url, type, config) VALUES (?, ?, ?, ?)',
+                (exchange['name'], exchange['url'], exchange['type'], config_json)
+            )
+            logger.info(f"Added exchange: {exchange['name']}")
+        
+        await db.commit()
+        logger.info("Database initialized with default data")
 
 
 async def get_tokens() -> List[str]:

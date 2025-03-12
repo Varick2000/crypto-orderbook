@@ -27,6 +27,7 @@ class MEXCClient(BaseExchangeClient):
         self.tokens = []
         self.is_connected = False
         self.http_client = aiohttp.ClientSession()
+        self._recv_lock = asyncio.Lock()
         
     async def connect(self):
         try:
@@ -147,7 +148,8 @@ class MEXCClient(BaseExchangeClient):
     async def listen(self):
         while self.is_connected:
             try:
-                message = await self.ws.recv()
+                async with self._recv_lock:
+                    message = await self.ws.recv()
                 await self._process_message(message)
             except websockets.exceptions.ConnectionClosed:
                 logger.warning(f"{self.name}: WebSocket з'єднання закрито, перепідключення...")

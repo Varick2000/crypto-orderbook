@@ -6,11 +6,13 @@ from typing import Dict, List, Set, Any
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+import websockets
 
 from config import TOKENS, EXCHANGES, POLLING_INTERVAL
 from database.db import init_db, get_tokens, get_exchanges, add_token, add_exchange, remove_token, remove_exchange
 from services.orderbook_manager import OrderbookManager
 from services.websocket_manager import WebSocketManager
+from services.coinex_force_updater import CoinExForceUpdater
 
 # Налаштування логування
 logging.basicConfig(
@@ -39,24 +41,60 @@ orderbook_manager = OrderbookManager(websocket_manager)
 @app.on_event("startup")
 async def startup_event():
     """Виконується при запуску сервера."""
+    logger.info("Starting up server...")
+    
     # Ініціалізація бази даних
+    logger.info("Initializing database...")
     await init_db()
     
     # Завантаження токенів і бірж з БД
+    logger.info("Loading tokens and exchanges from database...")
     tokens = await get_tokens()
     exchanges = await get_exchanges()
     
+    logger.info(f"Loaded tokens: {tokens}")
+    logger.info(f"Loaded exchanges: {exchanges}")
+    
     # Ініціалізація менеджера ордербуків
+    logger.info("Initializing orderbook manager...")
     await orderbook_manager.initialize(tokens, exchanges)
     
     # Запуск процесів оновлення
+    logger.info("Starting polling processes...")
     asyncio.create_task(orderbook_manager.start_polling())
+    
+    # Знаходимо клієнт CoinEx серед усіх бірж
+    coinex_client = None
+    for exchange_name, client in orderbook_manager.exchanges.items():
+        if exchange_name == 'CoinEx':
+            coinex_client = client
+            logger.info("Знайдено клієнт CoinEx для примусового оновлення")
+            break
+    
+    # Якщо клієнт знайдено, створюємо форсувальник оновлень
+    if coinex_client:
+        logger.info("Ініціалізуємо CoinExForceUpdater")
+        coinex_updater = CoinExForceUpdater(coinex_client, websocket_manager)
+        app.state.coinex_updater = coinex_updater
+        asyncio.create_task(coinex_updater.start())
+        logger.info("CoinExForceUpdater запущено")
+    else:
+        logger.warning("Клієнт CoinEx не знайдено, CoinExForceUpdater не запущено")
+    
+    logger.info("Server startup completed")
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Виконується при зупинці сервера."""
     await orderbook_manager.close_all_connections()
+    
+    # Зупиняємо модуль форсування оновлень CoinEx
+    if hasattr(app.state, "coinex_updater"):
+        logger.info("Зупиняємо CoinExForceUpdater")
+        await app.state.coinex_updater.stop()
+    
+    logger.info("Server shutdown completed")
 
 
 @app.websocket("/ws")
@@ -151,7 +189,10 @@ async def process_client_message(websocket: WebSocket, message: str):
             
         elif action == "update_prices":
             exchange = data.get("exchange")
-            if exchange:
+            if exchange == "CoinEx" and hasattr(app.state, "coinex_updater"):
+                logger.info("Запит на примусове оновлення даних CoinEx")
+                await app.state.coinex_updater.force_update_all()
+            elif exchange:
                 await orderbook_manager.refresh_exchange(exchange)
             else:
                 await orderbook_manager.refresh_all()
@@ -252,6 +293,34 @@ async def api_remove_exchange(exchange: str):
     await remove_exchange(exchange)
     await orderbook_manager.remove_exchange(exchange)
     return {"status": "success", "message": f"Exchange {exchange} removed"}
+
+
+# Додаткові ендпоінти для керування CoinEx
+@app.post("/api/coinex/force-update")
+async def force_update_coinex():
+    """Примусове оновлення всіх даних CoinEx."""
+    try:
+        if not hasattr(app.state, "coinex_updater"):
+            return {"status": "error", "message": "CoinExForceUpdater не ініціалізовано"}
+            
+        await app.state.coinex_updater.force_update_all()
+        return {"status": "success", "message": "Оновлення CoinEx запущено"}
+    except Exception as e:
+        logger.error(f"Помилка при примусовому оновленні CoinEx: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/coinex/force-update/{token}")
+async def force_update_coinex_token(token: str):
+    """Примусове оновлення конкретного токену CoinEx."""
+    try:
+        if not hasattr(app.state, "coinex_updater"):
+            return {"status": "error", "message": "CoinExForceUpdater не ініціалізовано"}
+            
+        await app.state.coinex_updater.force_update_token(token)
+        return {"status": "success", "message": f"Оновлення токену {token} запущено"}
+    except Exception as e:
+        logger.error(f"Помилка при оновленні токену {token}: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":

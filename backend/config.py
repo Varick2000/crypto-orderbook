@@ -17,15 +17,13 @@ EXCHANGES = [
         "name": "MEXC",
         "url": "wss://wbs.mexc.com/raw/ws",
         "type": "websocket",
-        "config": {
-            "ping_interval": 30,
-            "subscribe_template": {
-                "method": "SUBSCRIPTION",
-                "params": ["spot@public.limit.depth.v3.api@$TOKEN_USDT@5"]
-            },
-            "reconnect_interval": 5,
-            "max_reconnect_attempts": 3
-        }
+        "config": {}
+    },
+    {
+        "name": "CoinEx",
+        "url": "wss://ws.coinex.com/",
+        "type": "websocket",
+        "config": {}
     },
     {
         "name": "TradeOgre",

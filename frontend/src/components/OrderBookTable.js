@@ -131,7 +131,7 @@ const OrderBookTable = ({
                     className={getCellClass(token, exchange, 'sell')}
                     onClick={() => handleCellClick(token, exchange, 'sell')}
                   >
-                    {orderbooks[token]?.[exchange]?.best_sell || 'X X X'}
+                    {orderbooks[token]?.[exchange]?.best_sell || 'Немає даних'}
                   </td>
                 ))}
               </tr>
@@ -144,7 +144,7 @@ const OrderBookTable = ({
                     className={getCellClass(token, exchange, 'buy')}
                     onClick={() => handleCellClick(token, exchange, 'buy')}
                   >
-                    {orderbooks[token]?.[exchange]?.best_buy || 'X X X'}
+                    {orderbooks[token]?.[exchange]?.best_buy || 'Немає даних'}
                   </td>
                 ))}
               </tr>
