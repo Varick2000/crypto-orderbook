@@ -358,7 +358,7 @@
     }
     .orderbook-table tbody {
       display: block;
-      max-height: calc(24px * 10);
+      max-height: calc(24px * 7.5);
       overflow-y: auto;
       overflow-x: hidden;
       scrollbar-width: thin;
@@ -697,6 +697,128 @@
       top: 50%;
       transform: translateY(-50%);
     }
+
+    .table-caption {
+      text-align: right;
+      color: #9ca3af;
+      font-size: 11px;
+      margin-top: 4px;
+      font-style: italic;
+    }
+
+    .light-theme .table-caption {
+      color: #6b7280;
+    }
+
+    /* Стилі для таблиці 5 */
+    #orderbook-table {
+      position: relative;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #orderbook-table thead,
+    #orderbook-table tbody {
+      display: block;
+    }
+
+    #orderbook-table tbody {
+      height: calc(53px * 5.625);
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: #444444 #1a1a1a;
+    }
+
+    #orderbook-table thead tr,
+    #orderbook-table tbody tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    #orderbook-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background-color: #333333;
+      width: calc(100% - 4px); /* Зменшено відступ для тоншого скролбара */
+    }
+
+    #orderbook-table th,
+    #orderbook-table td {
+      padding: 12px 8px;
+      border: 1px solid #444444;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center; /* Вирівнювання по центру */
+    }
+
+    /* Фіксовані ширини для стовпців */
+    #orderbook-table th:first-child,
+    #orderbook-table td:first-child {
+      width: 80px;
+      text-align: center; /* Змінено на center */
+      padding-left: 8px;
+    }
+
+    #orderbook-table th:nth-child(2),
+    #orderbook-table td:nth-child(2) {
+      width: 60px;
+      text-align: center;
+    }
+
+    #orderbook-table th:not(:first-child):not(:nth-child(2)),
+    #orderbook-table td:not(:first-child):not(:nth-child(2)) {
+      width: calc((100% - 140px) / var(--exchange-count, 3));
+      text-align: center; /* Змінено на center */
+      padding-right: 8px;
+    }
+
+    /* Стилі для скролбара */
+    #orderbook-table tbody::-webkit-scrollbar {
+      width: 4px; /* Тонший скролбар */
+    }
+
+    #orderbook-table tbody::-webkit-scrollbar-track {
+      background: #1a1a1a;
+      border-radius: 2px;
+    }
+
+    #orderbook-table tbody::-webkit-scrollbar-thumb {
+      background: #444444;
+      border-radius: 2px;
+    }
+
+    #orderbook-table tbody::-webkit-scrollbar-thumb:hover {
+      background: #555555;
+    }
+
+    /* Стилі для світлої теми */
+    .light-theme #orderbook-table thead {
+      background-color: #f3f4f6;
+    }
+
+    .light-theme #orderbook-table tbody::-webkit-scrollbar-track {
+      background: #f0f2f5;
+    }
+
+    .light-theme #orderbook-table tbody::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+    }
+
+    .light-theme #orderbook-table tbody::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    .light-theme #orderbook-table {
+      border: 1px solid #e5e7eb;
+    }
   </style>
 </head>
 <body>
@@ -731,6 +853,7 @@
         </div>
       </div>
     </div>
+    <div class="table-caption" style="text-align: left; margin: 20px 0 10px 0;">Група таблиць ордербуків (Таблиці 1-4)</div>
     <div class="orderbook-tables-container">
       <div class="orderbook-tables-row">
         <div class="orderbook-table-container">
@@ -748,7 +871,7 @@
           <div class="orderbook-content">
             <div class="orderbook-row">
               <div class="orderbook-side">
-                <table class="orderbook-table">
+                <table class="orderbook-table" id="orderbook-left-sell-table">
                   <thead>
                     <tr>
                       <th>Price</th>
@@ -759,9 +882,10 @@
                   </thead>
                   <tbody id="orderbook-left-sell"></tbody>
                 </table>
+                <div class="table-caption">Таблиця 1 (orderbook-left-sell-table)</div>
               </div>
               <div class="orderbook-side">
-                <table class="orderbook-table">
+                <table class="orderbook-table" id="orderbook-left-buy-table">
                   <tbody id="orderbook-left-buy"></tbody>
                   <thead>
                     <tr>
@@ -772,6 +896,7 @@
                     </tr>
                   </thead>
                 </table>
+                <div class="table-caption">Таблиця 2 (orderbook-left-buy-table)</div>
               </div>
             </div>
           </div>
@@ -791,7 +916,7 @@
           <div class="orderbook-content">
             <div class="orderbook-row">
               <div class="orderbook-side">
-                <table class="orderbook-table">
+                <table class="orderbook-table" id="orderbook-right-sell-table">
                   <thead>
                     <tr>
                       <th>Price</th>
@@ -802,9 +927,10 @@
                   </thead>
                   <tbody id="orderbook-right-sell"></tbody>
                 </table>
+                <div class="table-caption">Таблиця 3 (orderbook-right-sell-table)</div>
               </div>
               <div class="orderbook-side">
-                <table class="orderbook-table">
+                <table class="orderbook-table" id="orderbook-right-buy-table">
                   <tbody id="orderbook-right-buy"></tbody>
                   <thead>
                     <tr>
@@ -815,53 +941,59 @@
                     </tr>
                   </thead>
                 </table>
+                <div class="table-caption">Таблиця 4 (orderbook-right-buy-table)</div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-    <div class="threshold-controls">
-      <div class="threshold-group">
-        <label for="percent-threshold">Percent Threshold:</label>
-        <input id="percent-threshold" type="range" min="0.1" max="10" step="0.1" value="2.0">
-        <div class="threshold-value"><span id="percent-value">2.0</span>%</div>
+    <div class="control-container" style="background-color: #1a1a1a; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <div class="threshold-controls">
+        <div class="threshold-group">
+          <label for="percent-threshold">Percent Threshold:</label>
+          <input id="percent-threshold" type="range" min="0.1" max="10" step="0.1" value="2.0">
+          <div class="threshold-value"><span id="percent-value">2.0</span>%</div>
+        </div>
+        <div class="threshold-group">
+          <label for="delta-threshold">Delta Threshold (USDT):</label>
+          <input id="delta-threshold" type="range" min="0.1" max="5" step="0.1" value="0.5">
+          <div class="threshold-value">$<span id="delta-value">0.5</span></div>
+        </div>
       </div>
-      <div class="threshold-group">
-        <label for="delta-threshold">Delta Threshold (USDT):</label>
-        <input id="delta-threshold" type="range" min="0.1" max="5" step="0.1" value="0.5">
-        <div class="threshold-value">$<span id="delta-value">0.5</span></div>
+      <div class="controls">
+        <div class="control-group">
+          <input type="text" id="token-input" class="token-input" placeholder="Введіть назву токена для пошуку або додавання..." pattern="[A-Za-z0-9]+" title="Тільки літери англійського алфавіту та цифри">
+          <button id="search-btn" class="search-btn">Пошук</button>
+          <button id="add-token-btn" class="add-token-btn">Додати токен</button>
+          <button id="remove-token-btn" class="remove-token-btn">Видалити токен</button>
+          <button id="refresh-btn" class="refresh-btn">Оновити дані</button>
+          <button id="find-arb-btn" class="arb-btn">Знайти арбітраж</button>
+        </div>
+        <div>
+          <select id="token-filter">
+            <option value="all">Всі токени</option>
+          </select>
+        </div>
       </div>
     </div>
-    <div class="controls">
-      <div class="control-group">
-        <input type="text" id="token-input" class="token-input" placeholder="Введіть назву токена для пошуку або додавання..." pattern="[A-Za-z0-9]+" title="Тільки літери англійського алфавіту та цифри">
-        <button id="search-btn" class="search-btn">Пошук</button>
-        <button id="add-token-btn" class="add-token-btn">Додати токен</button>
-        <button id="remove-token-btn" class="remove-token-btn">Видалити токен</button>
-        <button id="refresh-btn" class="refresh-btn">Оновити дані</button>
-        <button id="find-arb-btn" class="arb-btn">Знайти арбітраж</button>
-      </div>
-      <div>
-        <select id="token-filter">
-          <option value="all">Всі токени</option>
-        </select>
-      </div>
+    <div class="table-caption" style="text-align: left; margin: 20px 0 10px 0;">Таблиця 5 (orderbook-table)</div>
+    <div class="orderbook-tables-container">
+      <table id="orderbook-table">
+        <thead>
+          <tr>
+            <th>Token</th>
+            <th>Type</th>
+            <th id="exchanges-header">Loading...</th>
+          </tr>
+        </thead>
+        <tbody id="orderbook-body">
+          <tr>
+            <td colspan="3">Loading data...</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <table id="orderbook-table">
-      <thead>
-        <tr>
-          <th>Token</th>
-          <th>Type</th>
-          <th id="exchanges-header">Loading...</th>
-        </tr>
-      </thead>
-      <tbody id="orderbook-body">
-        <tr>
-          <td colspan="3">Loading data...</td>
-        </tr>
-      </tbody>
-    </table>
     <div id="opportunities" class="opportunities hidden">
       <h2>Arbitrage Opportunities</h2>
       <div id="opportunities-list"></div>
@@ -1175,6 +1307,7 @@
         // Рядок для Buy
         const buyRow = document.createElement('tr');
         buyRow.innerHTML = `
+          <td rowspan="2" class="token-cell">${token}</td>
           <td class="type-cell">Buy</td>
           ${exchanges.map(exchange => `
             <td id="${token}-${exchange}-buy" class="buy-price">
@@ -1564,3 +1697,4 @@
   </script>
 </body>
 </html>
+

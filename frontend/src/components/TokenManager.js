@@ -1,11 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 /**
  * Компонент для керування токенами
  */
-const TokenManager = ({ tokens, onAddToken, onRemoveToken }) => {
+const TokenManager = ({ tokens, onAddToken, searchToken }) => {
   const [newToken, setNewToken] = useState('');
+  const [filteredTokens, setFilteredTokens] = useState(tokens);
   
+  useEffect(() => {
+    if (searchToken) {
+      setFilteredTokens(tokens.filter(token => 
+        token.includes(searchToken.toUpperCase())
+      ));
+    } else {
+      setFilteredTokens(tokens);
+    }
+  }, [tokens, searchToken]);
+
   // Обробник додавання токена
   const handleAddToken = (e) => {
     e.preventDefault();
@@ -23,20 +34,16 @@ const TokenManager = ({ tokens, onAddToken, onRemoveToken }) => {
       <h3>Tokens</h3>
       
       <div className="token-list">
-        {tokens.map(token => (
+        {filteredTokens.map(token => (
           <div key={token} className="list-item">
             <span>{token}</span>
-            <button 
-              className="remove-button" 
-              onClick={() => onRemoveToken(token)}
-            >
-              ✕
-            </button>
           </div>
         ))}
         
-        {tokens.length === 0 && (
-          <div className="list-item">No tokens added</div>
+        {filteredTokens.length === 0 && (
+          <div className="list-item">
+            {searchToken ? 'Токени не знайдено' : 'Немає доданих токенів'}
+          </div>
         )}
       </div>
       
@@ -49,7 +56,7 @@ const TokenManager = ({ tokens, onAddToken, onRemoveToken }) => {
               type="text"
               placeholder="Token Symbol (e.g. BTC)"
               value={newToken}
-              onChange={e => setNewToken(e.target.value)}
+              onChange={e => setNewToken(e.target.value.toUpperCase())}
               style={{ marginRight: '5px' }}
             />
             <button type="submit">Add</button>

@@ -78,8 +78,12 @@
   }
   
   .token-cell {
-    font-weight: bold;
-    background-color: #f9f9f9;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .token-cell:hover {
+    background-color: #f0f0f0;
   }
   
   .type-cell {
@@ -287,4 +291,115 @@
   .order-detail-table th {
     background-color: #f2f2f2;
     font-weight: bold;
+  }
+  
+  .search-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 8px;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .search-input:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  }
+  
+  th[role="columnheader"] {
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  th[role="columnheader"]:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .sort-icon {
+    margin-left: 5px;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  
+  .sort-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 20px !important;
+  }
+  
+  .sort-header:hover {
+    background-color: #e9ecef;
+  }
+  
+  .sort-header::after {
+    content: '▼';
+    position: absolute;
+    right: 8px;
+    opacity: 0.3;
+  }
+  
+  .sort-header.asc::after {
+    content: '▲';
+    opacity: 1;
+  }
+  
+  .sort-header.desc::after {
+    content: '▼';
+    opacity: 1;
+  }
+  
+  .orderbook-table th.sort-header {
+    cursor: pointer;
+    position: relative;
+    padding-right: 25px;
+    background-color: #f8f9fa;
+    transition: background-color 0.2s;
+  }
+  
+  .orderbook-table th.sort-header:hover {
+    background-color: #e9ecef;
+  }
+  
+  .orderbook-table th.sort-header::after {
+    content: '';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+  }
+  
+  .orderbook-table th.sort-header.asc::after {
+    border-bottom: 5px solid #333;
+    border-top: none;
+  }
+  
+  .orderbook-table th.sort-header.desc::after {
+    border-top: 5px solid #333;
+    border-bottom: none;
+  }
+  
+  .token-header {
+    cursor: pointer;
+    user-select: none;
+    background-color: #f2f2f2 !important;
+    transition: background-color 0.2s;
+    position: relative;
+  }
+  
+  .token-header:hover {
+    background-color: #e0e0e0 !important;
   }

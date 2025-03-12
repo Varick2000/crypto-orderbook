@@ -22,6 +22,7 @@ function App() {
     percentThreshold: 5.0,  // 5%
     deltaThreshold: 0.5     // 0.5 USDT
   });
+  const [searchToken, setSearchToken] = useState('');
   
   // Ініціалізація WebSocket-сервісу
   useEffect(() => {
@@ -131,6 +132,11 @@ function App() {
     });
   };
   
+  // Обробник кліку на токен
+  const handleTokenClick = (token) => {
+    setSearchToken(token);
+  };
+  
   // Обробник додавання токена
   const handleAddToken = (token) => {
     if (wsService) {
@@ -139,9 +145,15 @@ function App() {
   };
   
   // Обробник видалення токена
-  const handleRemoveToken = (token) => {
+  const handleRemoveToken = () => {
+    if (!searchToken) {
+      showToast('Будь ласка, виберіть токен для видалення', 'error');
+      return;
+    }
+
     if (wsService) {
-      wsService.removeToken(token);
+      wsService.removeToken(searchToken);
+      setSearchToken('');
     }
   };
   
@@ -195,10 +207,23 @@ function App() {
       
       <div className="app-content">
         <div className="sidebar">
+          <div className="search-section">
+            <input
+              type="text"
+              placeholder="Пошук токена..."
+              value={searchToken}
+              onChange={(e) => setSearchToken(e.target.value.toUpperCase())}
+              className="search-input"
+            />
+            <button onClick={handleRemoveToken} className="remove-button">
+              Видалити токен
+            </button>
+          </div>
+          
           <TokenManager 
             tokens={tokens} 
-            onAddToken={handleAddToken} 
-            onRemoveToken={handleRemoveToken} 
+            onAddToken={handleAddToken}
+            searchToken={searchToken}
           />
           
           <ExchangeManager 
@@ -230,6 +255,7 @@ function App() {
             tokens={tokens}
             thresholds={thresholds}
             onCellClick={handleCellClick}
+            onTokenClick={handleTokenClick}
           />
         </div>
       </div>

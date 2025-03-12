@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { calculatePercent, calculateDelta } from '../utils/calculations';
 
 /**
@@ -9,12 +9,27 @@ const OrderBookTable = ({
   exchanges, 
   tokens,
   thresholds,
-  onCellClick
+  onCellClick,
+  onTokenClick
 }) => {
   // Стан для підсвічених клітин
   const [highlightedCells, setHighlightedCells] = useState({});
   // Зберігаємо попередні значення для порівняння
   const prevValues = useRef({});
+  const [isAscending, setIsAscending] = useState(true);
+
+  // Логуємо вхідні пропси при кожному рендері
+  console.log('OrderBookTable props:', { 
+    tokens,
+    isAscending
+  });
+
+  // Функція для сортування токенів
+  const getSortedTokens = () => {
+    return [...tokens].sort((a, b) => {
+      return isAscending ? a.localeCompare(b) : b.localeCompare(a);
+    });
+  };
 
   // Функція для визначення чи потрібно підсвітити клітину
   const shouldHighlight = useCallback((token, exchange, type, value) => {
@@ -126,19 +141,31 @@ const OrderBookTable = ({
     return className;
   };
 
-  // Обробник кліку на клітину
-  const handleCellClick = (token, exchange, type) => {
-    if (onCellClick) {
-      onCellClick(token, exchange, type);
-    }
-  };
-
   return (
     <div className="orderbook-table-container">
       <table className="orderbook-table">
         <thead>
           <tr>
-            <th>Token</th>
+            <th 
+              onClick={() => setIsAscending(!isAscending)}
+              style={{ 
+                cursor: 'pointer',
+                backgroundColor: '#f2f2f2',
+                userSelect: 'none',
+                position: 'relative',
+                paddingRight: '20px'
+              }}
+            >
+              Token 
+              <span style={{
+                position: 'absolute',
+                right: '5px',
+                top: '50%',
+                transform: 'translateY(-50%)'
+              }}>
+                {isAscending ? '↑' : '↓'}
+              </span>
+            </th>
             <th>Type</th>
             {exchanges.map(exchange => (
               <th key={exchange}>{exchange}</th>
@@ -146,30 +173,35 @@ const OrderBookTable = ({
           </tr>
         </thead>
         <tbody>
-          {tokens.map(token => (
+          {getSortedTokens().map(token => (
             <React.Fragment key={token}>
-              {/* Рядок для цін Sell */}
               <tr>
-                <td rowSpan="2" className="token-cell">{token}</td>
+                <td 
+                  rowSpan="2" 
+                  className="token-cell" 
+                  onClick={() => onTokenClick(token)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  {token}
+                </td>
                 <td className="type-cell">Sell</td>
                 {exchanges.map(exchange => (
                   <td 
                     key={`${token}-${exchange}-sell`}
                     className={getCellClass(token, exchange, 'sell')}
-                    onClick={() => handleCellClick(token, exchange, 'sell')}
+                    onClick={() => onCellClick(token, exchange, 'sell')}
                   >
                     {orderbooks[token]?.[exchange]?.best_sell || 'Немає даних'}
                   </td>
                 ))}
               </tr>
-              {/* Рядок для цін Buy */}
               <tr>
                 <td className="type-cell">Buy</td>
                 {exchanges.map(exchange => (
                   <td 
                     key={`${token}-${exchange}-buy`}
                     className={getCellClass(token, exchange, 'buy')}
-                    onClick={() => handleCellClick(token, exchange, 'buy')}
+                    onClick={() => onCellClick(token, exchange, 'buy')}
                   >
                     {orderbooks[token]?.[exchange]?.best_buy || 'Немає даних'}
                   </td>
