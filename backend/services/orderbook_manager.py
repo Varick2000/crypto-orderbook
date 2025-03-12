@@ -462,25 +462,35 @@ class OrderbookManager:
     async def update_orderbooks(self):
         """Оновлення ордербуків для всіх токенів на всіх біржах"""
         self.update_stats['total_updates'] += 1
+        current_time = time.time()
         
         for exchange_name, client in self.exchanges.items():
             for token in self.tokens:
                 try:
+                    # Перевіряємо час останнього оновлення
+                    last_update = self.last_update_time.get(token, {}).get(exchange_name, 0)
+                    if current_time - last_update < 1:  # Пропускаємо якщо пройшло менше 1 секунди
+                        continue
+                        
                     # Отримуємо дані ордербуку
                     orderbook_data = None
                     if exchange_name == "CoinEx":
                         orderbook_data = await self._get_coinex_orderbook(client, token)
-                        if orderbook_data:
-                            best_sell = orderbook_data.get('best_sell')
-                            best_buy = orderbook_data.get('best_buy')
+                    elif exchange_name == "TradeOgre":
+                        orderbook_data = await self._get_tradeogre_orderbook(client, token)
                     else:
                         orderbook_data = await self._get_standard_orderbook(client, token)
-                        if orderbook_data:
-                            best_sell = orderbook_data.get('best_sell')
-                            best_buy = orderbook_data.get('best_buy')
-                    
+                        
                     if orderbook_data:
-                        if self._is_valid_prices(best_sell, best_buy):
+                        best_sell = orderbook_data.get('best_sell')
+                        best_buy = orderbook_data.get('best_buy')
+                        
+                        # Перевіряємо чи змінилися ціни
+                        current_data = self.orderbooks.get(token, {}).get(exchange_name, {})
+                        current_sell = current_data.get('best_sell')
+                        current_buy = current_data.get('best_buy')
+                        
+                        if (best_sell != current_sell or best_buy != current_buy) and self._is_valid_prices(best_sell, best_buy):
                             # Оновлюємо кеш
                             self._update_orderbook_cache(exchange_name, token, orderbook_data)
                             
@@ -488,21 +498,12 @@ class OrderbookManager:
                             await self._broadcast_update(exchange_name, token, orderbook_data)
                             
                             self.update_stats['successful_updates'] += 1
-                        else:
-                            await self._handle_error(
-                                exchange_name, 
-                                token, 
-                                ValueError("Невалідні ціни")
-                            )
-                    else:
-                        await self._handle_error(
-                            exchange_name,
-                            token,
-                            ValueError("Немає даних ордербуку")
-                        )
+                            logger.info(f"Updated prices for {token} on {exchange_name}: sell={best_sell}, buy={best_buy}")
                         
                 except Exception as e:
                     await self._handle_error(exchange_name, token, e)
+                    
+        await asyncio.sleep(0.1)  # Невелика затримка між циклами
     
     async def start_polling(self):
         """Запуск періодичного оновлення ордербуків."""
@@ -567,3 +568,48 @@ class OrderbookManager:
                 "asks": [],
                 "bids": []
             }
+
+    async def _get_tradeogre_orderbook(self, client, token: str) -> Dict[str, Any]:
+        """
+        Отримання даних ордербуку для TradeOgre.
+        
+        Args:
+            client: Клієнт TradeOgre
+            token (str): Символ токена
+            
+        Returns:
+            Dict[str, Any]: Дані ордербуку
+        """
+        try:
+            # Отримуємо дані через REST API
+            orderbook = await client.get_orderbook(token)
+            if not orderbook:
+                logger.warning(f"TradeOgre: No orderbook data for {token}")
+                return None
+                
+            # Форматуємо дані
+            asks = orderbook.get('asks', [])
+            bids = orderbook.get('bids', [])
+            
+            if not asks or not bids:
+                logger.warning(f"TradeOgre: Empty orderbook for {token}")
+                return None
+                
+            # Отримуємо найкращі ціни
+            best_sell = orderbook.get('best_sell')
+            best_buy = orderbook.get('best_buy')
+            
+            if not best_sell or not best_buy:
+                logger.warning(f"TradeOgre: Missing best prices for {token}")
+                return None
+                
+            return {
+                'asks': asks,
+                'bids': bids,
+                'best_sell': best_sell,
+                'best_buy': best_buy
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting TradeOgre orderbook for {token}: {str(e)}")
+            return None

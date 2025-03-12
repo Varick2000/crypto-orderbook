@@ -3,6 +3,7 @@
 """
 import json
 import logging
+import time
 from typing import Dict, List, Set, Any, Optional
 
 from fastapi import WebSocket
@@ -93,6 +94,10 @@ class WebSocketManager:
             logger.warning("Немає активних підключень для відправки оновлення")
             return
        
+        # Додаємо тип повідомлення, якщо його немає
+        if 'type' not in message and 'exchange' in message and 'token' in message:
+            message['type'] = 'orderbook_update'
+       
         # Додаємо додаткове логування для відстеження оновлень CoinEx
         if message.get("type") == "orderbook_update" and message.get("exchange") == "CoinEx":
             logger.info(f"WebSocketManager: відправка оновлення CoinEx для {message.get('token')}: sell={message.get('best_sell')}, buy={message.get('best_buy')}")
@@ -149,6 +154,7 @@ class WebSocketManager:
             "exchange": exchange,
             "token": token,
             "best_sell": best_sell,
-            "best_buy": best_buy
+            "best_buy": best_buy,
+            "timestamp": int(time.time() * 1000)  # Додаємо часову мітку
         }
         await self.broadcast(message)

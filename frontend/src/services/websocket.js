@@ -32,27 +32,30 @@ class WebSocketService {
      * Підключення до WebSocket
      */
     connect() {
-      if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
-        console.log('WebSocket already connected or connecting');
+      if (this.socket) {
+        console.log('WebSocket already exists, skipping connection');
         return;
       }
       
+      console.log('Connecting to WebSocket:', this.url);
       this.socket = new WebSocket(this.url);
       
       this.socket.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connection established');
         this.isConnected = true;
         this.reconnectAttempts = 0;
         this.triggerCallbacks('onOpen');
+        
+        // Запит початкових даних при підключенні
+        this.send({ action: 'update_prices' });
       };
       
-      this.socket.onclose = (event) => {
-        console.log(`WebSocket closed: ${event.code} - ${event.reason}`);
+      this.socket.onclose = () => {
+        console.log('WebSocket connection closed');
         this.isConnected = false;
-        this.triggerCallbacks('onClose', event);
-        
-        // Спроба переконектитись
-        this.scheduleReconnect();
+        this.socket = null;
+        this.triggerCallbacks('onClose');
+        this.reconnect();
       };
       
       this.socket.onerror = (error) => {
@@ -63,33 +66,39 @@ class WebSocketService {
       this.socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
-          this.handleMessage(message);
+          console.log('Отримано повідомлення:', message);
+
+          if (message.type === 'initial_data') {
+            this.emit('onInitialData', message.data);
+          } else if (message.type === 'orderbook_update') {
+            this.emit('onOrderbookUpdate', message);
+          } else if (message.type === 'token_added') {
+            this.emit('onTokenAdded', message.token);
+          }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error('Помилка при обробці повідомлення:', error);
         }
       };
     }
   
     /**
-     * Планування спроби переконектитись
+     * Перепідключення до WebSocket
      */
-    scheduleReconnect() {
+    reconnect() {
       if (this.reconnectTimeout) {
-        clearTimeout(this.reconnectTimeout);
+        return;
       }
       
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        this.reconnectAttempts++;
-        const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
-        
-        console.log(`Reconnecting in ${delay / 1000} seconds (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-        
-        this.reconnectTimeout = setTimeout(() => {
-          this.connect();
-        }, delay);
-      } else {
-        console.error('Max reconnect attempts reached, giving up');
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        console.error('Max reconnection attempts reached');
+        return;
       }
+      
+      this.reconnectAttempts++;
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnectTimeout = null;
+        this.connect();
+      }, this.reconnectDelay);
     }
   
     /**
@@ -99,30 +108,30 @@ class WebSocketService {
       if (this.socket) {
         this.socket.close();
         this.socket = null;
-        this.isConnected = false;
-        
-        if (this.reconnectTimeout) {
-          clearTimeout(this.reconnectTimeout);
-          this.reconnectTimeout = null;
-        }
+      }
+      this.isConnected = false;
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = null;
       }
     }
   
     /**
-     * Відправка повідомлення на сервер
+     * Відправка повідомлення через WebSocket
      */
     send(message) {
-      if (!this.isConnected) {
-        console.warn('Cannot send message, WebSocket not connected');
-        return false;
+      if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+        console.error('WebSocket is not connected, readyState:', this.socket?.readyState);
+        return;
       }
       
       try {
-        this.socket.send(JSON.stringify(message));
-        return true;
+        const messageStr = JSON.stringify(message);
+        console.log('Sending WebSocket message:', messageStr);
+        this.socket.send(messageStr);
       } catch (error) {
-        console.error('Error sending WebSocket message:', error);
-        return false;
+        console.error('Error sending message:', error);
+        this.triggerCallbacks('onError', error);
       }
     }
   
@@ -137,10 +146,10 @@ class WebSocketService {
           this.triggerCallbacks('onOrderbookUpdate', {
             exchange: message.exchange,
             token: message.token,
-            sell: message.sell,
-            buy: message.buy,
             best_sell: message.best_sell,
-            best_buy: message.best_buy
+            best_buy: message.best_buy,
+            sell: message.sell,
+            buy: message.buy
           });
           break;
           
@@ -188,7 +197,17 @@ class WebSocketService {
     }
   
     /**
-     * Виклик зареєстрованих колбеків
+     * Додавання обробника подій
+     */
+    on(event, callback) {
+      if (this.callbacks[event]) {
+        this.callbacks[event].push(callback);
+      }
+      return this;
+    }
+  
+    /**
+     * Виклик всіх обробників для події
      */
     triggerCallbacks(event, data) {
       if (this.callbacks[event]) {
@@ -203,42 +222,28 @@ class WebSocketService {
     }
   
     /**
-     * Реєстрація колбеку
+     * Оновлення цін
      */
-    on(event, callback) {
-      if (this.callbacks[event]) {
-        this.callbacks[event].push(callback);
-      } else {
-        console.warn(`Unknown event: ${event}`);
-      }
-      
-      return this; // Для ланцюгового виклику
-    }
-  
-    /**
-     * Видалення колбеку
-     */
-    off(event, callback) {
-      if (this.callbacks[event]) {
-        this.callbacks[event] = this.callbacks[event].filter(cb => cb !== callback);
-      }
-      
-      return this;
-    }
-  
-    /**
-     * Підписка на оновлення ордербуків
-     */
-    subscribe(tokens = [], exchanges = []) {
-      return this.send({
-        action: 'subscribe',
-        tokens,
-        exchanges
+    updatePrices() {
+      return new Promise((resolve, reject) => {
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
+          console.warn('WebSocket не підключений');
+          reject(new Error('WebSocket не підключений'));
+          return;
+        }
+
+        try {
+          this.socket.send(JSON.stringify({ type: 'get_prices' }));
+          resolve();
+        } catch (error) {
+          console.error('Помилка при відправці запиту на оновлення цін:', error);
+          reject(error);
+        }
       });
     }
   
     /**
-     * Додавання нового токену
+     * Додавання токена
      */
     addToken(token) {
       return this.send({
@@ -248,7 +253,7 @@ class WebSocketService {
     }
   
     /**
-     * Видалення токену
+     * Видалення токена
      */
     removeToken(token) {
       return this.send({
@@ -258,12 +263,12 @@ class WebSocketService {
     }
   
     /**
-     * Додавання нової біржі
+     * Додавання біржі
      */
-    addExchange(exchange, url, type = 'websocket') {
+    addExchange(name, url, type = 'websocket') {
       return this.send({
         action: 'add_exchange',
-        exchange,
+        exchange: name,
         url,
         type
       });
@@ -275,16 +280,6 @@ class WebSocketService {
     removeExchange(exchange) {
       return this.send({
         action: 'remove_exchange',
-        exchange
-      });
-    }
-  
-    /**
-     * Оновлення цін
-     */
-    updatePrices(exchange = null) {
-      return this.send({
-        action: 'update_prices',
         exchange
       });
     }

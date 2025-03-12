@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { calculatePercent, calculateDelta } from '../utils/calculations';
 
 /**
@@ -13,6 +13,8 @@ const OrderBookTable = ({
 }) => {
   // Стан для підсвічених клітин
   const [highlightedCells, setHighlightedCells] = useState({});
+  // Зберігаємо попередні значення для порівняння
+  const prevValues = useRef({});
 
   // Функція для визначення чи потрібно підсвітити клітину
   const shouldHighlight = useCallback((token, exchange, type, value) => {
@@ -73,13 +75,33 @@ const OrderBookTable = ({
         
         const sellValue = orderbooks[token][exchange].best_sell;
         const buyValue = orderbooks[token][exchange].best_buy;
+        const lastUpdate = orderbooks[token][exchange].lastUpdate;
+        
+        // Перевіряємо чи змінилися значення
+        const prevSell = prevValues.current[`${token}-${exchange}-sell`];
+        const prevBuy = prevValues.current[`${token}-${exchange}-buy`];
+        const prevUpdate = prevValues.current[`${token}-${exchange}-update`];
+        
+        const isUpdated = lastUpdate && (!prevUpdate || lastUpdate > prevUpdate);
+        
+        if (sellValue !== prevSell || isUpdated) {
+          prevValues.current[`${token}-${exchange}-sell`] = sellValue;
+        }
+        
+        if (buyValue !== prevBuy || isUpdated) {
+          prevValues.current[`${token}-${exchange}-buy`] = buyValue;
+        }
+        
+        prevValues.current[`${token}-${exchange}-update`] = lastUpdate;
         
         const sellHighlight = shouldHighlight(token, exchange, 'sell', sellValue);
         const buyHighlight = shouldHighlight(token, exchange, 'buy', buyValue);
         
         newHighlightedCells[token][exchange] = {
           sell: sellHighlight,
-          buy: buyHighlight
+          buy: buyHighlight,
+          sellUpdated: sellValue !== prevSell || isUpdated,
+          buyUpdated: buyValue !== prevBuy || isUpdated
         };
       });
     });
@@ -89,11 +111,16 @@ const OrderBookTable = ({
 
   // Функція для визначення класу CSS для клітини
   const getCellClass = (token, exchange, type) => {
-    const highlight = highlightedCells[token]?.[exchange]?.[type];
+    const highlight = highlightedCells[token]?.[exchange];
     let className = `price-cell ${type}-price`;
     
     if (highlight) {
-      className += ` highlight-${highlight}`;
+      if (highlight[type]) {
+        className += ` highlight-${highlight[type]}`;
+      }
+      if (highlight[`${type}Updated`]) {
+        className += ' updated';
+      }
     }
     
     return className;

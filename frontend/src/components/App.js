@@ -26,20 +26,46 @@ function App() {
   // Ініціалізація WebSocket-сервісу
   useEffect(() => {
     const service = new WebSocketService(WS_URL);
+    let updateTimeout = null;
+
+    const scheduleNextUpdate = () => {
+      updateTimeout = setTimeout(() => {
+        if (service && service.isConnected) {
+          service.updatePrices().then(() => {
+            scheduleNextUpdate();
+          });
+        } else {
+          scheduleNextUpdate();
+        }
+      }, 1000);
+    };
     
     // Реєстрація обробників подій
     service
-      .on('onOpen', () => setConnected(true))
-      .on('onClose', () => setConnected(false))
+      .on('onOpen', () => {
+        setConnected(true);
+        service.updatePrices().then(() => {
+          scheduleNextUpdate();
+        });
+      })
+      .on('onClose', () => {
+        setConnected(false);
+        if (updateTimeout) {
+          clearTimeout(updateTimeout);
+        }
+      })
       .on('onInitialData', (data) => {
         setTokens(data.tokens || []);
         setExchanges(data.exchanges.map(e => e.name) || []);
         setOrderbooks(data.orderbooks || {});
       })
       .on('onOrderbookUpdate', (data) => {
+        console.log('Отримано оновлення ордербуку:', data);
         setOrderbooks(prev => {
-          const newOrderbooks = { ...prev };
+          // Створюємо глибоку копію попереднього стану
+          const newOrderbooks = JSON.parse(JSON.stringify(prev));
           
+          // Ініціалізуємо структуру, якщо вона не існує
           if (!newOrderbooks[data.token]) {
             newOrderbooks[data.token] = {};
           }
@@ -48,25 +74,17 @@ function App() {
             newOrderbooks[data.token][data.exchange] = {};
           }
           
+          // Оновлюємо дані
           newOrderbooks[data.token][data.exchange] = {
             best_sell: data.best_sell,
             best_buy: data.best_buy,
             sells: data.sell,
-            buys: data.buy
+            buys: data.buy,
+            lastUpdate: Date.now()
           };
           
           return newOrderbooks;
         });
-        
-        // Якщо це оновлення для обраного ордеру, оновлюємо його деталі
-        if (selectedOrder && 
-            selectedOrder.token === data.token && 
-            selectedOrder.exchange === data.exchange) {
-          setSelectedOrder(prev => ({
-            ...prev,
-            orders: selectedOrder.type === 'sell' ? data.sell : data.buy
-          }));
-        }
       })
       .on('onTokenAdded', (token) => {
         setTokens(prev => [...prev, token]);
@@ -83,14 +101,19 @@ function App() {
       .on('onOrderbooksCleared', () => {
         setOrderbooks({});
       });
-    
+
     // Підключення до WebSocket
     service.connect();
     setWsService(service);
-    
+
     // Відключення при розмонтуванні компонента
     return () => {
-      service.disconnect();
+      if (updateTimeout) {
+        clearTimeout(updateTimeout);
+      }
+      if (service) {
+        service.disconnect();
+      }
     };
   }, []);
   
