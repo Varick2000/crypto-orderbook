@@ -994,6 +994,8 @@
           orderbooks = message.orderbooks || {};
           window.lastData = { tokens, exchanges, orderbooks };
           updateTokenFilter();
+          updateExchangeSelects();
+          updateTokenSelects();
           renderTable();
           break;
         case 'orderbook_update':
@@ -1315,28 +1317,52 @@
         leftTokenSelect = document.getElementById('left-token-select');
         rightExchangeSelect = document.getElementById('right-exchange-select');
         rightTokenSelect = document.getElementById('right-token-select');
+
+        // Оновлюємо комбобокси початковими даними, якщо вони вже є
+        if (exchanges.length > 0) {
+            updateExchangeSelects();
+        }
+        if (tokens.length > 0) {
+            updateTokenSelects();
+        }
         
-        // Додаємо функцію до глобального об'єкту
-        window.toggleSort = toggleSort;
+        // Додаємо обробники подій для комбобоксів
+        leftExchangeSelect.addEventListener('change', function() {
+            const token = leftTokenSelect.value;
+            if (token && this.value) updateOrderbooks(token, this.value, false);
+        });
         
+        leftTokenSelect.addEventListener('change', function() {
+            const exchange = leftExchangeSelect.value;
+            if (exchange && this.value) updateOrderbooks(this.value, exchange, false);
+        });
+        
+        rightExchangeSelect.addEventListener('change', function() {
+            const token = rightTokenSelect.value;
+            if (token && this.value) updateOrderbooks(token, this.value, true);
+        });
+        
+        rightTokenSelect.addEventListener('change', function() {
+            const exchange = rightExchangeSelect.value;
+            if (exchange && this.value) updateOrderbooks(this.value, exchange, true);
+        });
+        
+        // Додаємо обробники кліків для основної таблиці
         const orderbookBody = document.getElementById('orderbook-body');
         
         orderbookBody.addEventListener('click', function(e) {
             const cell = e.target.closest('td');
             if (!cell) return;
-
-            const row = cell.closest('tr');
-            const tokenCell = row.querySelector('.token-cell');
             
-            if (!tokenCell) return;
-
-            // Отримуємо токен і біржу з ID комірки
-            const cellId = cell.id;
-            const [token, exchange, type] = cellId.split('-');
+            const parts = cell.id.split('-');
+            if (parts.length !== 3) return;
             
+            const [token, exchange] = parts;
             if (!token || !exchange) return;
             
-            console.log('Left click on cell:', { token, exchange, type });
+            leftExchangeSelect.value = exchange;
+            leftTokenSelect.value = token;
+            
             updateOrderbooks(token, exchange, false);
         });
 
@@ -1345,66 +1371,34 @@
             
             const cell = e.target.closest('td');
             if (!cell) return;
-
-            const row = cell.closest('tr');
-            const tokenCell = row.querySelector('.token-cell');
             
-            if (!tokenCell) return;
-
-            // Отримуємо токен і біржу з ID комірки
-            const cellId = cell.id;
-            const [token, exchange, type] = cellId.split('-');
+            const parts = cell.id.split('-');
+            if (parts.length !== 3) return;
             
+            const [token, exchange] = parts;
             if (!token || !exchange) return;
             
-            console.log('Right click on cell:', { token, exchange, type });
+            rightExchangeSelect.value = exchange;
+            rightTokenSelect.value = token;
+            
             updateOrderbooks(token, exchange, true);
         });
     });
 
-    // Обробники для комбобоксів
-    document.addEventListener('DOMContentLoaded', function() {
-      const leftExchangeSelect = document.getElementById('left-exchange-select');
-      const leftTokenSelect = document.getElementById('left-token-select');
-      const rightExchangeSelect = document.getElementById('right-exchange-select');
-      const rightTokenSelect = document.getElementById('right-token-select');
-
-      function updateExchangeSelects() {
+    // Функції оновлення комбобоксів
+    function updateExchangeSelects() {
+        if (!leftExchangeSelect || !rightExchangeSelect) return;
         const exchangeOptions = exchanges.map(exchange => `<option value="${exchange}">${exchange}</option>`).join('');
         leftExchangeSelect.innerHTML = '<option value="">Виберіть біржу</option>' + exchangeOptions;
         rightExchangeSelect.innerHTML = '<option value="">Виберіть біржу</option>' + exchangeOptions;
-      }
-      function updateTokenSelects() {
+    }
+
+    function updateTokenSelects() {
+        if (!leftTokenSelect || !rightTokenSelect) return;
         const tokenOptions = tokens.map(token => `<option value="${token}">${token}</option>`).join('');
         leftTokenSelect.innerHTML = '<option value="">Виберіть токен</option>' + tokenOptions;
         rightTokenSelect.innerHTML = '<option value="">Виберіть токен</option>' + tokenOptions;
-      }
-      function updateSelects() {
-        updateExchangeSelects();
-        updateTokenSelects();
-      }
-      leftExchangeSelect.addEventListener('change', function() {
-        const token = leftTokenSelect.value;
-        if (token && this.value) updateOrderbooks(token, this.value, false);
-      });
-      leftTokenSelect.addEventListener('change', function() {
-        const exchange = leftExchangeSelect.value;
-        if (exchange && this.value) updateOrderbooks(this.value, exchange, false);
-      });
-      rightExchangeSelect.addEventListener('change', function() {
-        const token = rightTokenSelect.value;
-        if (token && this.value) updateOrderbooks(token, this.value, true);
-      });
-      rightTokenSelect.addEventListener('change', function() {
-        const exchange = rightExchangeSelect.value;
-        if (exchange && this.value) updateOrderbooks(this.value, exchange, true);
-      });
-      const originalHandleMessage = handleMessage;
-      handleMessage = function(message) {
-        originalHandleMessage(message);
-        if (message.type === 'initial_data') updateSelects();
-      };
-    });
+    }
 
     function refreshPrices() {
       if (socket && socket.readyState === WebSocket.OPEN) {
@@ -1526,6 +1520,41 @@
         action: 'add_token',
         token: newToken
       })) {
+        tokenInput.value = '';
+      }
+    });
+
+    // Додаємо обробник для кнопки видалення токену
+    document.getElementById('remove-token-btn').addEventListener('click', function() {
+      const tokenToRemove = tokenInput.value.trim().toUpperCase();
+      
+      if (!tokenToRemove) {
+        showToast('Будь ласка, введіть назву токену для видалення', 'error');
+        return;
+      }
+      
+      if (!tokens.includes(tokenToRemove)) {
+        showToast('Такого токену не існує', 'error');
+        return;
+      }
+      
+      if (sendMessage({
+        action: 'remove_token',
+        token: tokenToRemove
+      })) {
+        // Видаляємо токен з локального масиву
+        tokens = tokens.filter(t => t !== tokenToRemove);
+        
+        // Оновлюємо фільтр токенів
+        updateTokenFilter();
+        
+        // Оновлюємо селекти з токенами
+        updateTokenSelects();
+        
+        // Оновлюємо таблицю
+        renderTable();
+        
+        // Очищаємо поле вводу
         tokenInput.value = '';
       }
     });
