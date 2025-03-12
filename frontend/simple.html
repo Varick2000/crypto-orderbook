@@ -155,10 +155,10 @@
       color: #10b981 !important;
     }
     .highlight-green {
-      background-color: rgba(16, 185, 129, 0.1);
+      /* background-color: rgba(16, 185, 129, 0.1); */
     }
     .highlight-red {
-      background-color: rgba(239, 68, 68, 0.1);
+      /* background-color: rgba(239, 68, 68, 0.1); */
     }
     .opportunities {
       margin-top: 30px;
@@ -341,7 +341,7 @@
       color: #10b981;
     }
     .orderbook-table tbody tr:hover {
-      background-color: rgba(0,0,0,0.02);
+      /* background-color: rgba(0,0,0,0.02); */
     }
     .orderbook-table .price {
       font-weight: 600;
@@ -534,150 +534,147 @@
     input[type="range"] {
       -webkit-appearance: none;
       width: 100%;
-      height: 6px;
-      background: #444444;
-      border-radius: 3px;
+      height: 4px;
+      background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #ef4444 100%);
+      border-radius: 2px;
       outline: none;
+      margin: 15px 0;
     }
 
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      background: #111c2e;
+      width: 20px;
+      height: 20px;
+      background: #ffffff;
+      border: 2px solid #10b981;
       border-radius: 50%;
       cursor: pointer;
-      transition: background 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
     }
 
     input[type="range"]::-webkit-slider-thumb:hover {
-      background: #111113;
+      transform: scale(1.1);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
     }
 
-    /* Бігунки для світлої теми */
     .light-theme input[type="range"] {
-      background: #e5e7eb;
+      background: linear-gradient(90deg, #059669 0%, #2563eb 50%, #dc2626 100%);
     }
 
     .light-theme input[type="range"]::-webkit-slider-thumb {
-      background: #23334d;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background: #ffffff;
+      border-color: #059669;
     }
 
-    .light-theme input[type="range"]::-webkit-slider-thumb:hover {
-      background: #090d16;
+    .control-container {
+      background-color: #2d2d2d;
+      padding: 20px;
+      border-radius: 12px;
+      margin: 20px 0;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
 
-    .threshold-group input {
-      width: 100%;
-      margin: 10px 0;
+    .light-theme .control-container {
+      background-color: #f8fafc;
     }
 
-    .threshold-value {
-      margin-top: 5px;
-      font-size: 14px;
-      color: #ffffff;
-      text-align: center;
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
       font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      min-width: 120px;
+      justify-content: center;
+    }
+
+    .add-token-btn {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .add-token-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+    }
+
+    .remove-token-btn {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+
+    .remove-token-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+    }
+
+    .refresh-btn {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+    }
+
+    .refresh-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);
+    }
+
+    .arb-btn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+    }
+
+    .arb-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
     }
 
     .token-input {
-      padding: 8px 12px;
+      padding: 12px 16px;
       background-color: #333333;
-      border: 1px solid #444444;
-      border-radius: 6px;
+      border: 2px solid #444444;
+      border-radius: 8px;
       color: #ffffff;
       font-size: 14px;
       min-width: 300px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s ease;
     }
-    
+
     .token-input:focus {
       border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
-    
+
     .light-theme .token-input {
       background-color: #ffffff;
       border-color: #e5e7eb;
       color: #374151;
     }
-    
+
     .light-theme .token-input:focus {
       border-color: #3b82f6;
-    }
-
-    .add-token-btn {
-      background-color: #10b981;
-      padding: 8px 16px;
-    }
-    
-    .add-token-btn:hover {
-      background-color: #059669;
-    }
-    
-    .remove-token-btn {
-      background-color: #ef4444;
-      padding: 8px 16px;
-    }
-    
-    .remove-token-btn:hover {
-      background-color: #dc2626;
-    }
-
-    /* Стилі для спливаючих повідомлень */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-    }
-
-    .toast {
-      background-color: #333333;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 6px;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      display: flex;
-      align-items: center;
-      animation: slideIn 0.3s ease-out;
-    }
-
-    .toast.success {
-      background-color: #10b981;
-    }
-
-    .toast.error {
-      background-color: #ef4444;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
-    .light-theme .toast {
-      background-color: #ffffff;
-      color: #333333;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-
-    .light-theme .toast.success {
-      background-color: #d1fae5;
-      color: #065f46;
-    }
-
-    .light-theme .toast.error {
-      background-color: #fee2e2;
-      color: #991b1b;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
 
     .token-header {
@@ -687,7 +684,7 @@
     }
     
     .token-header:hover {
-      background-color: #404040 !important;
+      /* background-color: #404040 !important; */
     }
     
     .token-header::after {
@@ -819,6 +816,14 @@
     .light-theme #orderbook-table {
       border: 1px solid #e5e7eb;
     }
+
+    .sort-header:hover {
+      /* background-color: #e9ecef; */
+    }
+
+    .orderbook-table th.sort-header:hover {
+      /* background-color: #e9ecef; */
+    }
   </style>
 </head>
 <body>
@@ -948,7 +953,7 @@
         </div>
       </div>
     </div>
-    <div class="control-container" style="background-color: #1a1a1a; padding: 15px; border-radius: 8px; margin: 20px 0;">
+    <div class="control-container">
       <div class="threshold-controls">
         <div class="threshold-group">
           <label for="percent-threshold">Percent Threshold:</label>
@@ -964,14 +969,13 @@
       <div class="controls">
         <div class="control-group">
           <input type="text" id="token-input" class="token-input" placeholder="Введіть назву токена для пошуку або додавання..." pattern="[A-Za-z0-9]+" title="Тільки літери англійського алфавіту та цифри">
-          <button id="search-btn" class="search-btn">Пошук</button>
           <button id="add-token-btn" class="add-token-btn">Додати токен</button>
           <button id="remove-token-btn" class="remove-token-btn">Видалити токен</button>
           <button id="refresh-btn" class="refresh-btn">Оновити дані</button>
           <button id="find-arb-btn" class="arb-btn">Знайти арбітраж</button>
         </div>
         <div>
-          <select id="token-filter">
+          <select id="token-filter" class="token-filter">
             <option value="all">Всі токени</option>
           </select>
         </div>
@@ -1559,48 +1563,14 @@
       }
     });
 
-    // Додаємо обробник для поля вводу та кнопки пошуку
+    // Додаємо обробник для поля вводу
     const tokenInput = document.getElementById('token-input');
-    const searchBtn = document.getElementById('search-btn');
 
     // Пошук при введенні
     tokenInput.addEventListener('input', function() {
       const searchTerm = this.value.trim().toUpperCase();
       filterTable(searchTerm);
     });
-
-    // Пошук по кнопці
-    searchBtn.addEventListener('click', function() {
-      const searchTerm = tokenInput.value.trim().toUpperCase();
-      filterTable(searchTerm);
-    });
-
-    // Функція фільтрації таблиці
-    function filterTable(searchTerm) {
-      const rows = document.querySelectorAll('#orderbook-body tr');
-      
-      rows.forEach(row => {
-        const tokenCell = row.querySelector('.token-cell');
-        if (!tokenCell) return;
-        
-        const token = tokenCell.textContent;
-        const shouldShow = token.includes(searchTerm);
-        
-        const nextRow = row.nextElementSibling;
-        
-        if (shouldShow) {
-          row.style.display = '';
-          if (nextRow) nextRow.style.display = '';
-          row.classList.add('highlight-row');
-          if (nextRow) nextRow.classList.add('highlight-row');
-        } else {
-          row.style.display = 'none';
-          if (nextRow) nextRow.style.display = 'none';
-          row.classList.remove('highlight-row');
-          if (nextRow) nextRow.classList.remove('highlight-row');
-        }
-      });
-    }
 
     // Функція для показу спливаючих повідомлень
     function showToast(message, type = 'success') {
@@ -1691,6 +1661,33 @@
         tokenInput.value = '';
       }
     });
+
+    // Функція фільтрації таблиці
+    function filterTable(searchTerm) {
+      const rows = document.querySelectorAll('#orderbook-body tr');
+      
+      rows.forEach(row => {
+        const tokenCell = row.querySelector('.token-cell');
+        if (!tokenCell) return;
+        
+        const token = tokenCell.textContent;
+        const shouldShow = token.includes(searchTerm);
+        
+        const nextRow = row.nextElementSibling;
+        
+        if (shouldShow) {
+          row.style.display = '';
+          if (nextRow) nextRow.style.display = '';
+          row.classList.add('highlight-row');
+          if (nextRow) nextRow.classList.add('highlight-row');
+        } else {
+          row.style.display = 'none';
+          if (nextRow) nextRow.style.display = 'none';
+          row.classList.remove('highlight-row');
+          if (nextRow) nextRow.classList.remove('highlight-row');
+        }
+      });
+    }
 
     window.addEventListener('load', () => { connect(); });
     setInterval(() => { /* додаткові періодичні дії, якщо потрібно */ }, 5000);
