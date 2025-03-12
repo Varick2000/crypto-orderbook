@@ -679,6 +679,24 @@
       background-color: #fee2e2;
       color: #991b1b;
     }
+
+    .token-header {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    
+    .token-header:hover {
+      background-color: #404040 !important;
+    }
+    
+    .token-header::after {
+      content: attr(data-sort-icon);
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
   </style>
 </head>
 <body>
@@ -863,12 +881,7 @@
     let tokens = [];
     let exchanges = [];
     let orderbooks = {};
-
-    // Порогові значення
-    const thresholds = {
-      percentThreshold: 2.0,
-      deltaThreshold: 0.5
-    };
+    let isAscending = true;
 
     // Глобальні DOM елементи
     let leftExchangeSelect, leftTokenSelect, rightExchangeSelect, rightTokenSelect;
@@ -885,20 +898,30 @@
     const opportunitiesList = document.getElementById('opportunities-list');
 
     // Ініціалізація значень
-    percentThresholdInput.value = thresholds.percentThreshold;
-    deltaThresholdInput.value = thresholds.deltaThreshold;
-    percentValueText.textContent = thresholds.percentThreshold;
-    deltaValueText.textContent = thresholds.deltaThreshold;
+    percentThresholdInput.value = 2.0;
+    deltaThresholdInput.value = 0.5;
+    percentValueText.textContent = 2.0;
+    deltaValueText.textContent = 0.5;
 
     percentThresholdInput.addEventListener('input', function() {
-      thresholds.percentThreshold = parseFloat(this.value);
-      percentValueText.textContent = thresholds.percentThreshold;
-      renderTable();
+      const newValue = parseFloat(this.value);
+      if (!isNaN(newValue)) {
+        const thresholds = {
+          percentThreshold: newValue,
+          deltaThreshold: 0.5
+        };
+        renderTable();
+      }
     });
     deltaThresholdInput.addEventListener('input', function() {
-      thresholds.deltaThreshold = parseFloat(this.value);
-      deltaValueText.textContent = thresholds.deltaThreshold;
-      renderTable();
+      const newValue = parseFloat(this.value);
+      if (!isNaN(newValue)) {
+        const thresholds = {
+          percentThreshold: 2.0,
+          deltaThreshold: newValue
+        };
+        renderTable();
+      }
     });
     tokenFilter.addEventListener('change', function() {
       renderTable();
@@ -1101,12 +1124,12 @@
         const percent = calculatePercent(currentValue, otherValueFloat);
         const delta = calculateDelta(currentValue, otherValueFloat);
         if (type === 'sell') {
-          if ((percent <= -thresholds.percentThreshold) || (delta <= -thresholds.deltaThreshold)) {
+          if ((percent <= -2.0) || (delta <= -0.5)) {
             cell.classList.add('highlight-green');
             break;
           }
         } else {
-          if ((percent >= thresholds.percentThreshold) || (delta >= thresholds.deltaThreshold)) {
+          if ((percent >= 2.0) || (delta >= 0.5)) {
             cell.classList.add('highlight-green');
             break;
           }
@@ -1114,19 +1137,26 @@
       }
     }
 
-    // Оновлення таблиці ордербуку (створення рядків)
-    function renderTable() {
+    // Додаємо функцію сортування до глобального об'єкту
+    window.handleSort = function() {
+      isAscending = !isAscending;
+      const tokenHeader = document.querySelector('.token-header');
+      if (tokenHeader) {
+        tokenHeader.setAttribute('data-sort-icon', isAscending ? '↑' : '↓');
+      }
+      
       const filterValue = tokenFilter.value;
       const filteredTokens = filterValue === 'all' ? tokens : [filterValue];
-      const exchangesHeader = document.getElementById('exchanges-header');
-      exchangesHeader.parentElement.innerHTML = `
-        <th>Token</th>
-        <th>Type</th>
-        ${exchanges.map(exchange => `<th>${exchange}</th>`).join('')}
-      `;
+      
+      // Сортуємо токени
+      const sortedTokens = [...filteredTokens].sort((a, b) => {
+        return isAscending ? a.localeCompare(b) : b.localeCompare(a);
+      });
+      
       const tableBody = document.getElementById('orderbook-body');
       tableBody.innerHTML = '';
-      filteredTokens.forEach(token => {
+      
+      sortedTokens.forEach(token => {
         // Рядок для Sell
         const sellRow = document.createElement('tr');
         sellRow.innerHTML = `
@@ -1139,6 +1169,7 @@
           `).join('')}
         `;
         tableBody.appendChild(sellRow);
+        
         // Рядок для Buy
         const buyRow = document.createElement('tr');
         buyRow.innerHTML = `
@@ -1151,6 +1182,22 @@
         `;
         tableBody.appendChild(buyRow);
       });
+    };
+
+    // Оновлення таблиці ордербуку (створення рядків)
+    function renderTable() {
+      const filterValue = tokenFilter.value;
+      const filteredTokens = filterValue === 'all' ? tokens : [filterValue];
+      
+      const exchangesHeader = document.getElementById('exchanges-header');
+      const headerRow = exchangesHeader.parentElement;
+      headerRow.innerHTML = `
+        <th class="token-header" onclick="handleSort()" data-sort-icon="${isAscending ? '↑' : '↓'}">Token</th>
+        <th>Type</th>
+        ${exchanges.map(exchange => `<th>${exchange}</th>`).join('')}
+      `;
+      
+      window.handleSort(); // Викликаємо сортування одразу після рендерингу
     }
 
     // Функція для заповнення таблиці ордербуку
@@ -1268,6 +1315,9 @@
         leftTokenSelect = document.getElementById('left-token-select');
         rightExchangeSelect = document.getElementById('right-exchange-select');
         rightTokenSelect = document.getElementById('right-token-select');
+        
+        // Додаємо функцію до глобального об'єкту
+        window.toggleSort = toggleSort;
         
         const orderbookBody = document.getElementById('orderbook-body');
         
