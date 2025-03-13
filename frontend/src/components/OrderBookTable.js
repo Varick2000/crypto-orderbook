@@ -47,27 +47,37 @@ const OrderBookTable = ({
     for (const otherExchange of exchanges) {
       if (otherExchange === exchange) continue;
       
-      const otherValue = orderbooks[token]?.[otherExchange]?.[type === 'sell' ? 'best_buy' : 'best_sell'];
-      if (otherValue === 'X X X') continue;
-      
-      const otherValueFloat = parseFloat(otherValue);
-      if (isNaN(otherValueFloat)) continue;
-      
-      // Розрахунок відсотка і дельти
-      const percent = calculatePercent(currentValue, otherValueFloat);
-      const delta = calculateDelta(currentValue, otherValueFloat);
-      
       if (type === 'sell') {
-        // Для sell ордерів підсвічуємо, якщо поточна ціна нижча за buy ціну на іншій біржі
+        // Отримуємо buy ціну з іншої біржі
+        const otherBuy = orderbooks[token]?.[otherExchange]?.best_buy;
+        if (otherBuy === 'X X X') continue;
+        
+        const otherBuyFloat = parseFloat(otherBuy);
+        if (isNaN(otherBuyFloat)) continue;
+        
+        // Якщо наша ціна продажу менша за buy ціну на іншій біржі - можливий арбітраж
+        const percent = ((otherBuyFloat - currentValue) / currentValue) * 100;
+        const delta = otherBuyFloat - currentValue;
+        
         if (
-          (thresholds.isPercentActive && percent <= -thresholds.percentThreshold) || 
-          (thresholds.isDeltaActive && delta <= -thresholds.deltaThreshold)
+          (thresholds.isPercentActive && percent >= thresholds.percentThreshold) || 
+          (thresholds.isDeltaActive && delta >= thresholds.deltaThreshold)
         ) {
           highlightType = 'green';
           break;
         }
       } else {
-        // Для buy ордерів підсвічуємо, якщо поточна ціна вища за sell ціну на іншій біржі
+        // Отримуємо sell ціну з іншої біржі
+        const otherSell = orderbooks[token]?.[otherExchange]?.best_sell;
+        if (otherSell === 'X X X') continue;
+        
+        const otherSellFloat = parseFloat(otherSell);
+        if (isNaN(otherSellFloat)) continue;
+        
+        // Якщо наша ціна купівлі більша за sell ціну на іншій біржі - можна купити дешевше там
+        const percent = ((currentValue - otherSellFloat) / otherSellFloat) * 100;
+        const delta = currentValue - otherSellFloat;
+        
         if (
           (thresholds.isPercentActive && percent >= thresholds.percentThreshold) || 
           (thresholds.isDeltaActive && delta >= thresholds.deltaThreshold)

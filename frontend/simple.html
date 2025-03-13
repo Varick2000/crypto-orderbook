@@ -167,10 +167,12 @@
       color: #10b981 !important;
     }
     .highlight-green {
-      /* background-color: rgba(16, 185, 129, 0.1); */
+      background-color: rgba(16, 185, 129, 0.2) !important;
+      border: 1px solid rgba(16, 185, 129, 0.4) !important;
     }
     .highlight-red {
-      /* background-color: rgba(239, 68, 68, 0.1); */
+      background-color: rgba(239, 68, 68, 0.2) !important;
+      border: 1px solid rgba(239, 68, 68, 0.4) !important;
     }
     .opportunities {
       margin-top: 30px;
@@ -1070,25 +1072,88 @@
     const opportunitiesSection = document.getElementById('opportunities');
     const opportunitiesList = document.getElementById('opportunities-list');
 
-    // Ініціалізація значень
-    percentThresholdInput.value = 2.0;
-    deltaThresholdInput.value = 0.5;
-    percentValueText.textContent = 2.0;
-    deltaValueText.textContent = 0.5;
+    // Додаємо змінні для стану кнопок
+    let isPercentActive = localStorage.getItem('isPercentActive') === 'true';
+    let isDeltaActive = localStorage.getItem('isDeltaActive') === 'true';
 
-    percentThresholdInput.addEventListener('input', function() {
+    // Оновлюємо початковий стан кнопок та бігунків
+    document.addEventListener('DOMContentLoaded', function() {
+        const percentToggle = document.getElementById('percent-toggle');
+        const deltaToggle = document.getElementById('delta-toggle');
+        const percentThreshold = document.getElementById('percent-threshold');
+        const deltaThreshold = document.getElementById('delta-threshold');
+
+        // Встановлюємо початковий стан кнопок
+        if (isPercentActive) {
+            percentToggle.classList.add('active');
+            percentThreshold.disabled = false;
+        } else {
+            percentToggle.classList.remove('active');
+            percentThreshold.disabled = true;
+        }
+
+        if (isDeltaActive) {
+            deltaToggle.classList.add('active');
+            deltaThreshold.disabled = false;
+        } else {
+            deltaToggle.classList.remove('active');
+            deltaThreshold.disabled = true;
+        }
+
+        // Встановлюємо збережені значення бігунків
+        const savedPercentThreshold = localStorage.getItem('percentThreshold');
+        const savedDeltaThreshold = localStorage.getItem('deltaThreshold');
+        
+        if (savedPercentThreshold) {
+            percentThreshold.value = savedPercentThreshold;
+            document.getElementById('percent-value').textContent = savedPercentThreshold;
+        }
+        
+        if (savedDeltaThreshold) {
+            deltaThreshold.value = savedDeltaThreshold;
+            document.getElementById('delta-value').textContent = savedDeltaThreshold;
+        }
+    });
+
+    // Додаємо обробники для кнопок
+    document.getElementById('percent-toggle').addEventListener('click', function() {
+      isPercentActive = !isPercentActive;
+      localStorage.setItem('isPercentActive', isPercentActive);
+      this.classList.toggle('active');
+      const percentThreshold = document.getElementById('percent-threshold');
+      percentThreshold.disabled = !isPercentActive;
+      // Оновлюємо підсвічування при зміні стану
+      analyzeAndUpdateAllCells();
+    });
+
+    document.getElementById('delta-toggle').addEventListener('click', function() {
+      isDeltaActive = !isDeltaActive;
+      localStorage.setItem('isDeltaActive', isDeltaActive);
+      this.classList.toggle('active');
+      const deltaThreshold = document.getElementById('delta-threshold');
+      deltaThreshold.disabled = !isDeltaActive;
+      // Оновлюємо підсвічування при зміні стану
+      analyzeAndUpdateAllCells();
+    });
+
+    // Оновлюємо обробники для полів вводу
+    document.getElementById('percent-threshold').addEventListener('input', function() {
       const newValue = parseFloat(this.value);
       if (!isNaN(newValue)) {
-        percentValueText.textContent = newValue.toFixed(1);
-        renderTable();
+        localStorage.setItem('percentThreshold', newValue);
+        document.getElementById('percent-value').textContent = newValue.toFixed(1);
+        // Оновлюємо підсвічування при зміні значення
+        analyzeAndUpdateAllCells();
       }
     });
     
-    deltaThresholdInput.addEventListener('input', function() {
+    document.getElementById('delta-threshold').addEventListener('input', function() {
       const newValue = parseFloat(this.value);
       if (!isNaN(newValue)) {
-        deltaValueText.textContent = newValue.toFixed(1);
-        renderTable();
+        localStorage.setItem('deltaThreshold', newValue);
+        document.getElementById('delta-value').textContent = newValue.toFixed(1);
+        // Оновлюємо підсвічування при зміні значення
+        analyzeAndUpdateAllCells();
       }
     });
 
@@ -1241,16 +1306,42 @@
     function updateOrderbook(data) {
       const { exchange, token, best_sell, best_buy } = data;
       if (!orderbooks[token]) orderbooks[token] = {};
-      orderbooks[token][exchange] = { best_sell, best_buy };
-      updateTableCell(token, exchange, 'sell', best_sell);
-      updateTableCell(token, exchange, 'buy', best_buy);
+      
+      // Перевіряємо, чи змінилися значення
+      const currentOrderbook = orderbooks[token][exchange] || {};
+      if (currentOrderbook.best_sell !== best_sell || currentOrderbook.best_buy !== best_buy) {
+        orderbooks[token][exchange] = { best_sell, best_buy };
+        
+        // Оновлюємо тільки ті клітинки, які змінилися
+        if (currentOrderbook.best_sell !== best_sell) {
+          updateTableCell(token, exchange, 'sell', best_sell);
+        }
+        if (currentOrderbook.best_buy !== best_buy) {
+          updateTableCell(token, exchange, 'buy', best_buy);
+        }
+
+        // Аналізуємо всю таблицю після оновлення
+        analyzeAndUpdateAllCells();
+      }
     }
 
-    function updateTableCell(token, exchange, type, value) {
-      const cell = document.getElementById(`${token}-${exchange}-${type}`);
-      if (cell) {
-        cell.textContent = value;
-        updateCellHighlighting(cell, token, exchange, type, value);
+    function analyzeAndUpdateAllCells() {
+      const analysis = analyzeAllValues();
+      
+      // Оновлюємо підсвічування для всіх клітинок
+      for (const token in analysis) {
+        for (const cellKey in analysis[token]) {
+          const [exchange, type] = cellKey.split('-');
+          const cell = document.getElementById(`${token}-${exchange}-${type}`);
+          if (cell) {
+            cell.classList.remove('highlight-green', 'highlight-red');
+            if (analysis[token][cellKey] === 'green') {
+              cell.classList.add('highlight-green');
+            } else if (analysis[token][cellKey] === 'red') {
+              cell.classList.add('highlight-red');
+            }
+          }
+        }
       }
     }
 
@@ -1260,31 +1351,128 @@
     function calculateDelta(value1, value2) {
       return value1 - value2;
     }
+    function analyzeAllValues() {
+      const analysis = {};
+      
+      // Перевіряємо, чи активні бігунки
+      const isPercentActive = document.getElementById('percent-toggle').classList.contains('active');
+      const isDeltaActive = document.getElementById('delta-toggle').classList.contains('active');
+      
+      // Якщо обидва бігунки неактивні, не аналізуємо
+      if (!isPercentActive && !isDeltaActive) return analysis;
+
+      const percentThreshold = parseFloat(document.getElementById('percent-threshold').value);
+      const deltaThreshold = parseFloat(document.getElementById('delta-threshold').value);
+
+      // Аналізуємо всі значення
+      for (const token of tokens) {
+        analysis[token] = {};
+        
+        // Збираємо всі валідні значення для токена
+        const validValues = {
+          sell: {},
+          buy: {}
+        };
+        
+        for (const exchange of exchanges) {
+          if (!orderbooks[token] || !orderbooks[token][exchange]) continue;
+          
+          const sellValue = orderbooks[token][exchange].best_sell;
+          const buyValue = orderbooks[token][exchange].best_buy;
+          
+          if (sellValue !== 'X X X') {
+            const sellValueFloat = parseFloat(sellValue);
+            if (!isNaN(sellValueFloat)) {
+              validValues.sell[exchange] = sellValueFloat;
+            }
+          }
+          
+          if (buyValue !== 'X X X') {
+            const buyValueFloat = parseFloat(buyValue);
+            if (!isNaN(buyValueFloat)) {
+              validValues.buy[exchange] = buyValueFloat;
+            }
+          }
+        }
+        
+        // Аналізуємо кожну біржу
+        for (const exchange of exchanges) {
+          if (!orderbooks[token] || !orderbooks[token][exchange]) continue;
+          
+          const sellValue = orderbooks[token][exchange].best_sell;
+          const buyValue = orderbooks[token][exchange].best_buy;
+          
+          if (sellValue === 'X X X' || buyValue === 'X X X') continue;
+          
+          const sellValueFloat = parseFloat(sellValue);
+          const buyValueFloat = parseFloat(buyValue);
+          
+          if (isNaN(sellValueFloat) || isNaN(buyValueFloat)) continue;
+          
+          // Перевіряємо всі можливі пари бірж
+          for (const [otherExchange, otherBuyValue] of Object.entries(validValues.buy)) {
+            if (otherExchange === exchange) continue;
+            
+            const sellPercent = ((otherBuyValue - sellValueFloat) / sellValueFloat) * 100;
+            const sellDelta = otherBuyValue - sellValueFloat;
+            
+            if ((isPercentActive && sellPercent >= percentThreshold) || 
+                (isDeltaActive && sellDelta >= deltaThreshold)) {
+              // Підсвічуємо обидві клітинки
+              analysis[token][`${exchange}-sell`] = 'green';
+              analysis[token][`${otherExchange}-buy`] = 'red';
+            }
+          }
+          
+          // Перевіряємо інші біржі для buy ціни
+          for (const [otherExchange, otherSellValue] of Object.entries(validValues.sell)) {
+            if (otherExchange === exchange) continue;
+            
+            const buyPercent = ((buyValueFloat - otherSellValue) / otherSellValue) * 100;
+            const buyDelta = buyValueFloat - otherSellValue;
+            
+            if ((isPercentActive && buyPercent >= percentThreshold) || 
+                (isDeltaActive && buyDelta >= deltaThreshold)) {
+              // Підсвічуємо обидві клітинки
+              analysis[token][`${exchange}-buy`] = 'red';
+              analysis[token][`${otherExchange}-sell`] = 'green';
+            }
+          }
+        }
+      }
+      
+      return analysis;
+    }
+
+    function updateTableCell(token, exchange, type, value) {
+      const cell = document.getElementById(`${token}-${exchange}-${type}`);
+      if (cell) {
+        const oldValue = cell.textContent;
+        if (oldValue !== value) {
+          cell.textContent = value;
+          updateCellHighlighting(cell, token, exchange, type, value);
+        }
+      }
+    }
+
     function updateCellHighlighting(cell, token, exchange, type, value) {
+      // Видаляємо попередні класи підсвічування
       cell.classList.remove('highlight-green', 'highlight-red');
+      
+      // Перевіряємо базові умови
       if (value === 'X X X' || exchanges.length < 2) return;
       const currentValue = parseFloat(value);
       if (isNaN(currentValue)) return;
-      for (const otherExchange of exchanges) {
-        if (otherExchange === exchange) continue;
-        if (!orderbooks[token] || !orderbooks[token][otherExchange]) continue;
-        const otherValue = orderbooks[token][otherExchange][type === 'sell' ? 'best_sell' : 'best_buy'];
-        if (otherValue === 'X X X') continue;
-        const otherValueFloat = parseFloat(otherValue);
-        if (isNaN(otherValueFloat)) continue;
-        const percent = calculatePercent(currentValue, otherValueFloat);
-        const delta = calculateDelta(currentValue, otherValueFloat);
-        if (type === 'sell') {
-          if ((percent <= -2.0) || (delta <= -0.5)) {
-            cell.classList.add('highlight-green');
-            break;
-          }
-        } else {
-          if ((percent >= 2.0) || (delta >= 0.5)) {
-            cell.classList.add('highlight-green');
-            break;
-          }
-        }
+
+      // Отримуємо результат аналізу
+      const analysis = analyzeAllValues();
+      const highlightType = analysis[token]?.[`${exchange}-${type}`];
+      
+      // Застосовуємо підсвічування тільки якщо воно вказано в аналізі
+      if (highlightType === 'green') {
+        cell.classList.add('highlight-green');
+      } else if (highlightType === 'red') {
+        cell.classList.add('highlight-red');
       }
     }
 
@@ -1697,25 +1885,20 @@
       });
     }
 
-    // Додаємо змінні для стану кнопок
-    let isPercentActive = true;
-    let isDeltaActive = true;
-
-    // Додаємо обробники для кнопок
-    document.getElementById('percent-toggle').addEventListener('click', function() {
-      isPercentActive = !isPercentActive;
-      this.classList.toggle('active');
-      document.getElementById('percent-threshold').disabled = !isPercentActive;
-    });
-
-    document.getElementById('delta-toggle').addEventListener('click', function() {
-      isDeltaActive = !isDeltaActive;
-      this.classList.toggle('active');
-      document.getElementById('delta-threshold').disabled = !isDeltaActive;
-    });
-
     window.addEventListener('load', () => { connect(); });
-    setInterval(() => { /* додаткові періодичні дії, якщо потрібно */ }, 5000);
+    setInterval(() => {
+      const isPercentActive = document.getElementById('percent-toggle').classList.contains('active');
+      const isDeltaActive = document.getElementById('delta-toggle').classList.contains('active');
+      
+      if (isPercentActive || isDeltaActive) {
+        // Видаляємо всі підсвітки перед новим аналізом
+        document.querySelectorAll('.highlight-green, .highlight-red').forEach(cell => {
+          cell.classList.remove('highlight-green', 'highlight-red');
+        });
+        // Аналізуємо та оновлюємо підсвітки
+        analyzeAndUpdateAllCells();
+      }
+    }, 1000); // Аналіз кожну секунду
   </script>
 </body>
 </html>
