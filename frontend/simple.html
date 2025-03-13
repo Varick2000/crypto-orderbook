@@ -1885,20 +1885,109 @@
       });
     }
 
+    // Додаємо нову функцію для аналізу таблиць 1-4
+    function analyzeOrderbookTables() {
+      const isPercentActive = document.getElementById('percent-toggle').classList.contains('active');
+      const isDeltaActive = document.getElementById('delta-toggle').classList.contains('active');
+      
+      if (!isPercentActive && !isDeltaActive) return;
+
+      const percentThreshold = parseFloat(document.getElementById('percent-threshold').value);
+      const deltaThreshold = parseFloat(document.getElementById('delta-threshold').value);
+
+      // Отримуємо дані з таблиць
+      const leftSellTable = document.getElementById('orderbook-left-sell');
+      const leftBuyTable = document.getElementById('orderbook-left-buy');
+      const rightSellTable = document.getElementById('orderbook-right-sell');
+      const rightBuyTable = document.getElementById('orderbook-right-buy');
+
+      if (!leftSellTable || !leftBuyTable || !rightSellTable || !rightBuyTable) return;
+
+      // Отримуємо всі рядки з таблиць
+      const leftSellRows = leftSellTable.querySelectorAll('tr');
+      const leftBuyRows = leftBuyTable.querySelectorAll('tr');
+      const rightSellRows = rightSellTable.querySelectorAll('tr');
+      const rightBuyRows = rightBuyTable.querySelectorAll('tr');
+
+      // Очищаємо попереднє підсвічування
+      clearOrderbookHighlights();
+
+      // Аналізуємо кожен рядок таблиці 1 з кожним рядком таблиці 4
+      leftSellRows.forEach(leftSellRow => {
+        const leftSellPrice = parseFloat(leftSellRow.cells[0].textContent);
+        if (isNaN(leftSellPrice)) return;
+
+        rightBuyRows.forEach(rightBuyRow => {
+          const rightBuyPrice = parseFloat(rightBuyRow.cells[0].textContent);
+          if (isNaN(rightBuyPrice)) return;
+
+          const sellBuyPercent = ((rightBuyPrice - leftSellPrice) / leftSellPrice) * 100;
+          const sellBuyDelta = rightBuyPrice - leftSellPrice;
+
+          if ((isPercentActive && sellBuyPercent >= percentThreshold) || 
+              (isDeltaActive && sellBuyDelta >= deltaThreshold)) {
+            leftSellRow.classList.add('highlight-green');
+            rightBuyRow.classList.add('highlight-red');
+          }
+        });
+      });
+
+      // Аналізуємо кожен рядок таблиці 2 з кожним рядком таблиці 3
+      leftBuyRows.forEach(leftBuyRow => {
+        const leftBuyPrice = parseFloat(leftBuyRow.cells[0].textContent);
+        if (isNaN(leftBuyPrice)) return;
+
+        rightSellRows.forEach(rightSellRow => {
+          const rightSellPrice = parseFloat(rightSellRow.cells[0].textContent);
+          if (isNaN(rightSellPrice)) return;
+
+          const buySellPercent = ((leftBuyPrice - rightSellPrice) / rightSellPrice) * 100;
+          const buySellDelta = leftBuyPrice - rightSellPrice;
+
+          if ((isPercentActive && buySellPercent >= percentThreshold) || 
+              (isDeltaActive && buySellDelta >= deltaThreshold)) {
+            leftBuyRow.classList.add('highlight-red');
+            rightSellRow.classList.add('highlight-green');
+          }
+        });
+      });
+    }
+
+    function clearOrderbookHighlights() {
+      // Очищаємо підсвічування в таблицях 1-4
+      const tables = [
+        'orderbook-left-sell',
+        'orderbook-left-buy',
+        'orderbook-right-sell',
+        'orderbook-right-buy'
+      ];
+      
+      tables.forEach(tableId => {
+        const table = document.getElementById(tableId);
+        if (table) {
+          const rows = table.querySelectorAll('tr');
+          rows.forEach(row => {
+            row.classList.remove('highlight-green', 'highlight-red');
+          });
+        }
+      });
+    }
+
+    // Оновлюємо інтервал для аналізу
     window.addEventListener('load', () => { connect(); });
     setInterval(() => {
       const isPercentActive = document.getElementById('percent-toggle').classList.contains('active');
       const isDeltaActive = document.getElementById('delta-toggle').classList.contains('active');
       
       if (isPercentActive || isDeltaActive) {
-        // Видаляємо всі підсвітки перед новим аналізом
-        document.querySelectorAll('.highlight-green, .highlight-red').forEach(cell => {
-          cell.classList.remove('highlight-green', 'highlight-red');
-        });
-        // Аналізуємо та оновлюємо підсвітки
+        // Очищаємо попереднє підсвічування
+        clearOrderbookHighlights();
+        // Аналізуємо таблиці 1-4
+        analyzeOrderbookTables();
+        // Аналізуємо таблицю 5
         analyzeAndUpdateAllCells();
       }
-    }, 1000); // Аналіз кожну секунду
+    }, 500); // Аналіз кожні 500 мс
   </script>
 </body>
 </html>
