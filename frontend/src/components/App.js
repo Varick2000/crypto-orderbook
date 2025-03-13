@@ -20,7 +20,9 @@ function App() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [thresholds, setThresholds] = useState({
     percentThreshold: 5.0,  // 5%
-    deltaThreshold: 0.5     // 0.5 USDT
+    deltaThreshold: 0.5,    // 0.5 USDT
+    isPercentActive: true,  // Початковий стан кнопки включення/виключення для відсоткового порогу
+    isDeltaActive: true     // Початковий стан кнопки включення/виключення для порогу дельти
   });
   const [searchToken, setSearchToken] = useState('');
   

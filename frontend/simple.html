@@ -64,7 +64,65 @@
     }
     .control-group {
       display: flex;
+      flex-direction: row;
+      gap: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+    .input-controls {
+      display: flex;
+      flex-direction: column;
       gap: 10px;
+      flex: 1;
+      min-width: 300px;
+      max-width: 400px;
+    }
+    .threshold-controls {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      background-color: #2d2d2d;
+      padding: 15px;
+      border-radius: 8px;
+      flex: 2;
+      min-width: 500px;
+    }
+    .threshold-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+    }
+    .threshold-group label {
+      margin-bottom: 2px;
+      font-weight: bold;
+      font-size: 12px;
+      color: #ffffff;
+    }
+    .threshold-group input[type="range"] {
+      height: 3px;
+      margin: 10px 0;
+    }
+    .threshold-group input[type="range"]::-webkit-slider-thumb {
+      width: 15px;
+      height: 15px;
+    }
+    .threshold-value {
+      margin-top: 2px;
+      font-size: 12px;
+      color: #ffffff;
+      text-align: center;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .indicator-toggle {
+      width: 40px;
+      height: 8px;
     }
     button {
       padding: 10px 16px;
@@ -90,52 +148,6 @@
     }
     .arb-btn:hover {
       background-color: #d97706;
-    }
-    .threshold-controls {
-      display: flex;
-      gap: 15px;
-      margin-bottom: 20px;
-      background-color: #2d2d2d;
-      padding: 15px;
-      border-radius: 8px;
-    }
-    .threshold-group {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-    .threshold-group label {
-      margin-bottom: 5px;
-      font-weight: bold;
-      font-size: 14px;
-      color: #ffffff;
-    }
-    .threshold-group input {
-      width: 100%;
-    }
-    .threshold-value {
-      margin-top: 5px;
-      font-size: 14px;
-      color: #ffffff;
-      text-align: center;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      background-color: #2d2d2d;
-    }
-    th, td {
-      border: 1px solid #444444;
-      padding: 12px;
-      text-align: center;
-      color: #ffffff;
-    }
-    th {
-      background-color: #333333;
-      font-weight: bold;
-      color: #ffffff;
     }
     .token-cell {
       font-weight: bold;
@@ -587,26 +599,16 @@
       margin-top: 20px;
     }
 
-    .control-group {
+    .token-buttons {
       display: flex;
       gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      width: 100%;
     }
 
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 8px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      min-width: 120px;
-      justify-content: center;
+    .add-token-btn, .remove-token-btn {
+      flex: 1;
+      min-width: 0;
     }
 
     .add-token-btn {
@@ -647,34 +649,6 @@
     .arb-btn:hover {
       transform: translateY(-1px);
       box-shadow: 0 4px 6px rgba(245, 158, 11, 0.2);
-    }
-
-    .token-input {
-      padding: 12px 16px;
-      background-color: #333333;
-      border: 2px solid #444444;
-      border-radius: 8px;
-      color: #ffffff;
-      font-size: 14px;
-      min-width: 300px;
-      outline: none;
-      transition: all 0.2s ease;
-    }
-
-    .token-input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-    }
-
-    .light-theme .token-input {
-      background-color: #ffffff;
-      border-color: #e5e7eb;
-      color: #374151;
-    }
-
-    .light-theme .token-input:focus {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
     }
 
     .token-header {
@@ -1017,31 +991,33 @@
       </div>
     </div>
     <div class="control-container">
-      <div class="threshold-controls">
-        <div class="threshold-group">
-          <div class="slider-header">
-            <label for="percent-threshold">Percent Threshold:</label>
-            <button id="percent-toggle" class="indicator-toggle"></button>
-          </div>
-          <input id="percent-threshold" type="range" min="0.1" max="10" step="0.1" value="2.0">
-          <div class="threshold-value"><span id="percent-value">2.0</span>%</div>
-        </div>
-        <div class="threshold-group">
-          <div class="slider-header">
-            <label for="delta-threshold">Delta Threshold (USDT):</label>
-            <button id="delta-toggle" class="indicator-toggle"></button>
-          </div>
-          <input id="delta-threshold" type="range" min="0.1" max="5" step="0.1" value="0.5">
-          <div class="threshold-value">$<span id="delta-value">0.5</span></div>
-        </div>
-      </div>
       <div class="controls">
         <div class="control-group">
-          <input type="text" id="token-input" class="token-input" placeholder="Введіть назву токена для пошуку або додавання..." pattern="[A-Za-z0-9]+" title="Тільки літери англійського алфавіту та цифри">
-          <button id="add-token-btn" class="add-token-btn">Додати токен</button>
-          <button id="remove-token-btn" class="remove-token-btn">Видалити токен</button>
-          <button id="refresh-btn" class="refresh-btn">Оновити дані</button>
-          <button id="find-arb-btn" class="arb-btn">Знайти арбітраж</button>
+          <div class="input-controls">
+            <input type="text" id="token-input" class="token-input" placeholder="Введіть назву токена для пошуку або додавання..." pattern="[A-Za-z0-9]+" title="Тільки літери англійського алфавіту та цифри">
+            <div class="token-buttons">
+              <button id="add-token-btn" class="add-token-btn">Додати токен</button>
+              <button id="remove-token-btn" class="remove-token-btn">Видалити токен</button>
+            </div>
+          </div>
+          <div class="threshold-controls">
+            <div class="threshold-group">
+              <div class="slider-header">
+                <label for="percent-threshold">Percent Threshold:</label>
+                <button id="percent-toggle" class="indicator-toggle"></button>
+              </div>
+              <input id="percent-threshold" type="range" min="0.1" max="10" step="0.1" value="2.0">
+              <div class="threshold-value"><span id="percent-value">2.0</span>%</div>
+            </div>
+            <div class="threshold-group">
+              <div class="slider-header">
+                <label for="delta-threshold">Delta Threshold (USDT):</label>
+                <button id="delta-toggle" class="indicator-toggle"></button>
+              </div>
+              <input id="delta-threshold" type="range" min="0.1" max="5" step="0.1" value="0.5">
+              <div class="threshold-value">$<span id="delta-value">0.5</span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1091,8 +1067,6 @@
     const deltaThresholdInput = document.getElementById('delta-threshold');
     const percentValueText = document.getElementById('percent-value');
     const deltaValueText = document.getElementById('delta-value');
-    const refreshButton = document.getElementById('refresh-btn');
-    const findArbButton = document.getElementById('find-arb-btn');
     const opportunitiesSection = document.getElementById('opportunities');
     const opportunitiesList = document.getElementById('opportunities-list');
 
@@ -1116,14 +1090,6 @@
         deltaValueText.textContent = newValue.toFixed(1);
         renderTable();
       }
-    });
-    
-    refreshButton.addEventListener('click', function() {
-      refreshPrices();
-    });
-    
-    findArbButton.addEventListener('click', function() {
-      findArbitrageOpportunities();
     });
 
     function connect() {

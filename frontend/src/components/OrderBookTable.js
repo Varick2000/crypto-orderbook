@@ -38,13 +38,16 @@ const OrderBookTable = ({
     const currentValue = parseFloat(value);
     if (isNaN(currentValue)) return null;
 
+    // Перевіряємо чи активний хоча б один поріг
+    if (!thresholds.isPercentActive && !thresholds.isDeltaActive) return null;
+
     // Порівнюємо з іншими біржами
     let highlightType = null;
     
     for (const otherExchange of exchanges) {
       if (otherExchange === exchange) continue;
       
-      const otherValue = orderbooks[token]?.[otherExchange]?.[type === 'sell' ? 'best_sell' : 'best_buy'];
+      const otherValue = orderbooks[token]?.[otherExchange]?.[type === 'sell' ? 'best_buy' : 'best_sell'];
       if (otherValue === 'X X X') continue;
       
       const otherValueFloat = parseFloat(otherValue);
@@ -55,21 +58,21 @@ const OrderBookTable = ({
       const delta = calculateDelta(currentValue, otherValueFloat);
       
       if (type === 'sell') {
-        // Для sell ордерів підсвічуємо, якщо поточна ціна нижча
+        // Для sell ордерів підсвічуємо, якщо поточна ціна нижча за buy ціну на іншій біржі
         if (
-          (percent <= -thresholds.percentThreshold) || 
-          (delta <= -thresholds.deltaThreshold)
+          (thresholds.isPercentActive && percent <= -thresholds.percentThreshold) || 
+          (thresholds.isDeltaActive && delta <= -thresholds.deltaThreshold)
         ) {
           highlightType = 'green';
           break;
         }
       } else {
-        // Для buy ордерів підсвічуємо, якщо поточна ціна вища
+        // Для buy ордерів підсвічуємо, якщо поточна ціна вища за sell ціну на іншій біржі
         if (
-          (percent >= thresholds.percentThreshold) || 
-          (delta >= thresholds.deltaThreshold)
+          (thresholds.isPercentActive && percent >= thresholds.percentThreshold) || 
+          (thresholds.isDeltaActive && delta >= thresholds.deltaThreshold)
         ) {
-          highlightType = 'green';
+          highlightType = 'red';
           break;
         }
       }
@@ -122,7 +125,7 @@ const OrderBookTable = ({
     });
     
     setHighlightedCells(newHighlightedCells);
-  }, [orderbooks, tokens, exchanges, shouldHighlight]);
+  }, [orderbooks, tokens, exchanges, shouldHighlight, thresholds.forceUpdate]);
 
   // Функція для визначення класу CSS для клітини
   const getCellClass = (token, exchange, type) => {
