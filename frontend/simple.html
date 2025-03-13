@@ -1913,43 +1913,85 @@
       clearOrderbookHighlights();
 
       // Аналізуємо кожен рядок таблиці 1 з кожним рядком таблиці 4
-      leftSellRows.forEach(leftSellRow => {
-        const leftSellPrice = parseFloat(leftSellRow.cells[0].textContent);
-        if (isNaN(leftSellPrice)) return;
+      let remainingBuyAmount = 0;
+      let currentBuyRow = null;
+      let currentBuyPrice = 0;
 
-        rightBuyRows.forEach(rightBuyRow => {
-          const rightBuyPrice = parseFloat(rightBuyRow.cells[0].textContent);
-          if (isNaN(rightBuyPrice)) return;
+      rightBuyRows.forEach(rightBuyRow => {
+        const rightBuyPrice = parseFloat(rightBuyRow.cells[0].textContent);
+        const rightBuyAmount = parseFloat(rightBuyRow.cells[1].textContent);
+        if (isNaN(rightBuyPrice) || isNaN(rightBuyAmount)) return;
 
-          const sellBuyPercent = ((rightBuyPrice - leftSellPrice) / leftSellPrice) * 100;
-          const sellBuyDelta = rightBuyPrice - leftSellPrice;
+        // Якщо це новий ордер на покупку
+        if (currentBuyRow !== rightBuyRow) {
+          currentBuyRow = rightBuyRow;
+          currentBuyPrice = rightBuyPrice;
+          remainingBuyAmount = rightBuyAmount;
+        }
 
-          if ((isPercentActive && sellBuyPercent >= percentThreshold) || 
-              (isDeltaActive && sellBuyDelta >= deltaThreshold)) {
-            leftSellRow.classList.add('highlight-green');
-            rightBuyRow.classList.add('highlight-red');
-          }
-        });
+        // Якщо залишилось щось купити
+        if (remainingBuyAmount > 0) {
+          leftSellRows.forEach(leftSellRow => {
+            const leftSellPrice = parseFloat(leftSellRow.cells[0].textContent);
+            const leftSellAmount = parseFloat(leftSellRow.cells[1].textContent);
+            if (isNaN(leftSellPrice) || isNaN(leftSellAmount)) return;
+
+            const sellBuyPercent = ((rightBuyPrice - leftSellPrice) / leftSellPrice) * 100;
+            const sellBuyDelta = rightBuyPrice - leftSellPrice;
+
+            if ((isPercentActive && sellBuyPercent >= percentThreshold) || 
+                (isDeltaActive && sellBuyDelta >= deltaThreshold)) {
+              // Підсвічуємо тільки якщо є достатньо токенів для цього ордера
+              const minAmount = Math.min(leftSellAmount, remainingBuyAmount);
+              if (minAmount > 0) {
+                leftSellRow.classList.add('highlight-green');
+                rightBuyRow.classList.add('highlight-red');
+                remainingBuyAmount -= minAmount;
+              }
+            }
+          });
+        }
       });
 
       // Аналізуємо кожен рядок таблиці 2 з кожним рядком таблиці 3
-      leftBuyRows.forEach(leftBuyRow => {
-        const leftBuyPrice = parseFloat(leftBuyRow.cells[0].textContent);
-        if (isNaN(leftBuyPrice)) return;
+      let remainingSellAmount = 0;
+      let currentSellRow = null;
+      let currentSellPrice = 0;
 
-        rightSellRows.forEach(rightSellRow => {
-          const rightSellPrice = parseFloat(rightSellRow.cells[0].textContent);
-          if (isNaN(rightSellPrice)) return;
+      rightSellRows.forEach(rightSellRow => {
+        const rightSellPrice = parseFloat(rightSellRow.cells[0].textContent);
+        const rightSellAmount = parseFloat(rightSellRow.cells[1].textContent);
+        if (isNaN(rightSellPrice) || isNaN(rightSellAmount)) return;
 
-          const buySellPercent = ((leftBuyPrice - rightSellPrice) / rightSellPrice) * 100;
-          const buySellDelta = leftBuyPrice - rightSellPrice;
+        // Якщо це новий ордер на продаж
+        if (currentSellRow !== rightSellRow) {
+          currentSellRow = rightSellRow;
+          currentSellPrice = rightSellPrice;
+          remainingSellAmount = rightSellAmount;
+        }
 
-          if ((isPercentActive && buySellPercent >= percentThreshold) || 
-              (isDeltaActive && buySellDelta >= deltaThreshold)) {
-            leftBuyRow.classList.add('highlight-red');
-            rightSellRow.classList.add('highlight-green');
-          }
-        });
+        // Якщо залишилось щось продати
+        if (remainingSellAmount > 0) {
+          leftBuyRows.forEach(leftBuyRow => {
+            const leftBuyPrice = parseFloat(leftBuyRow.cells[0].textContent);
+            const leftBuyAmount = parseFloat(leftBuyRow.cells[1].textContent);
+            if (isNaN(leftBuyPrice) || isNaN(leftBuyAmount)) return;
+
+            const buySellPercent = ((leftBuyPrice - rightSellPrice) / rightSellPrice) * 100;
+            const buySellDelta = leftBuyPrice - rightSellPrice;
+
+            if ((isPercentActive && buySellPercent >= percentThreshold) || 
+                (isDeltaActive && buySellDelta >= deltaThreshold)) {
+              // Підсвічуємо тільки якщо є достатньо токенів для цього ордера
+              const minAmount = Math.min(leftBuyAmount, remainingSellAmount);
+              if (minAmount > 0) {
+                leftBuyRow.classList.add('highlight-red');
+                rightSellRow.classList.add('highlight-green');
+                remainingSellAmount -= minAmount;
+              }
+            }
+          });
+        }
       });
     }
 
