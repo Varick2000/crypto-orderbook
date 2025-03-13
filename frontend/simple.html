@@ -824,6 +824,69 @@
     .orderbook-table th.sort-header:hover {
       /* background-color: #e9ecef; */
     }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .slider-header label {
+      margin: 0;
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .indicator-toggle {
+      padding: 0;
+      width: 60px;
+      height: 10px;
+      border: none;
+      border-radius: 10px;
+      background-color: #444444;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 100px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .indicator-toggle:hover {
+      background-color: #555555;
+    }
+
+    .indicator-toggle.active {
+      background-color: #10b981;
+      color: white;
+      box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+    }
+
+    .indicator-toggle.active:hover {
+      background-color: #059669;
+    }
+
+    /* Стилі для світлої теми */
+    .light-theme .indicator-toggle {
+      background-color: #e5e7eb;
+      color: #374151;
+    }
+
+    .light-theme .indicator-toggle:hover {
+      background-color: #d1d5db;
+    }
+
+    .light-theme .indicator-toggle.active {
+      background-color: #059669;
+      color: white;
+    }
+
+    .light-theme .indicator-toggle.active:hover {
+      background-color: #047857;
+    }
   </style>
 </head>
 <body>
@@ -956,12 +1019,18 @@
     <div class="control-container">
       <div class="threshold-controls">
         <div class="threshold-group">
-          <label for="percent-threshold">Percent Threshold:</label>
+          <div class="slider-header">
+            <label for="percent-threshold">Percent Threshold:</label>
+            <button id="percent-toggle" class="indicator-toggle"></button>
+          </div>
           <input id="percent-threshold" type="range" min="0.1" max="10" step="0.1" value="2.0">
           <div class="threshold-value"><span id="percent-value">2.0</span>%</div>
         </div>
         <div class="threshold-group">
-          <label for="delta-threshold">Delta Threshold (USDT):</label>
+          <div class="slider-header">
+            <label for="delta-threshold">Delta Threshold (USDT):</label>
+            <button id="delta-toggle" class="indicator-toggle"></button>
+          </div>
           <input id="delta-threshold" type="range" min="0.1" max="5" step="0.1" value="0.5">
           <div class="threshold-value">$<span id="delta-value">0.5</span></div>
         </div>
@@ -1661,6 +1730,23 @@
         }
       });
     }
+
+    // Додаємо змінні для стану кнопок
+    let isPercentActive = true;
+    let isDeltaActive = true;
+
+    // Додаємо обробники для кнопок
+    document.getElementById('percent-toggle').addEventListener('click', function() {
+      isPercentActive = !isPercentActive;
+      this.classList.toggle('active');
+      document.getElementById('percent-threshold').disabled = !isPercentActive;
+    });
+
+    document.getElementById('delta-toggle').addEventListener('click', function() {
+      isDeltaActive = !isDeltaActive;
+      this.classList.toggle('active');
+      document.getElementById('delta-threshold').disabled = !isDeltaActive;
+    });
 
     window.addEventListener('load', () => { connect(); });
     setInterval(() => { /* додаткові періодичні дії, якщо потрібно */ }, 5000);
