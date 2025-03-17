@@ -1571,33 +1571,76 @@
 
         // Заповнюємо таблицю
         let currentVolume = 0;
-        sortedOrders.forEach(order => {
-            const price = parseFloat(order[0]);
-            const amount = parseFloat(order[1]);
-            const total = price * amount;
-            currentVolume += total;
+        // Для селл ордерів рахуємо глибину від найнижчої ціни до найвищої
+        if (isSell) {
+            // Спочатку розраховуємо глибину від найнижчої ціни
+            let depthVolume = 0;
+            for (let i = sortedOrders.length - 1; i >= 0; i--) {
+                const order = sortedOrders[i];
+                const price = parseFloat(order[0]);
+                const amount = parseFloat(order[1]);
+                const total = price * amount;
+                depthVolume += total;
+            }
 
-            // Визначаємо кількість знаків після коми для ціни
-            let priceDecimals = 8;
-            if (price >= 1000) priceDecimals = 2;
-            else if (price >= 100) priceDecimals = 3;
-            else if (price >= 10) priceDecimals = 4;
-            else if (price >= 1) priceDecimals = 5;
-            else if (price >= 0.1) priceDecimals = 6;
-            else if (price >= 0.01) priceDecimals = 7;
+            // Тепер відображаємо ордери з найвищої ціни до найнижчої
+            for (let i = 0; i < sortedOrders.length; i++) {
+                const order = sortedOrders[i];
+                const price = parseFloat(order[0]);
+                const amount = parseFloat(order[1]);
+                const total = price * amount;
+                currentVolume += total;
 
-            const row = document.createElement('tr');
-            row.className = isSell ? 'sell' : 'buy';
+                // Визначаємо кількість знаків після коми для ціни
+                let priceDecimals = 8;
+                if (price >= 1000) priceDecimals = 2;
+                else if (price >= 100) priceDecimals = 3;
+                else if (price >= 10) priceDecimals = 4;
+                else if (price >= 1) priceDecimals = 5;
+                else if (price >= 0.1) priceDecimals = 6;
+                else if (price >= 0.01) priceDecimals = 7;
 
-            row.innerHTML = `
-                <td class="${isSell ? 'sell-price' : 'buy-price'}">${price.toFixed(priceDecimals)}</td>
-                <td class="amount">${amount.toFixed(8)}</td>
-                <td class="total">${total.toFixed(2)}</td>
-                <td class="depth">${currentVolume.toFixed(2)}</td>
-            `;
+                const row = document.createElement('tr');
+                row.className = isSell ? 'sell' : 'buy';
 
-            tbody.appendChild(row);
-        });
+                row.innerHTML = `
+                    <td class="${isSell ? 'sell-price' : 'buy-price'}">${price.toFixed(priceDecimals)}</td>
+                    <td class="amount">${amount.toFixed(8)}</td>
+                    <td class="total">${total.toFixed(2)}</td>
+                    <td class="depth">${(depthVolume - currentVolume + total).toFixed(2)}</td>
+                `;
+
+                tbody.appendChild(row);
+            }
+        } else {
+            sortedOrders.forEach(order => {
+                const price = parseFloat(order[0]);
+                const amount = parseFloat(order[1]);
+                const total = price * amount;
+                currentVolume += total;
+
+                // Визначаємо кількість знаків після коми для ціни
+                let priceDecimals = 8;
+                if (price >= 1000) priceDecimals = 2;
+                else if (price >= 100) priceDecimals = 3;
+                else if (price >= 10) priceDecimals = 4;
+                else if (price >= 1) priceDecimals = 5;
+                else if (price >= 0.1) priceDecimals = 6;
+                else if (price >= 0.01) priceDecimals = 7;
+
+                const row = document.createElement('tr');
+                row.className = isSell ? 'sell' : 'buy';
+
+                row.innerHTML = `
+                    <td class="${isSell ? 'sell-price' : 'buy-price'}">${price.toFixed(priceDecimals)}</td>
+                    <td class="amount">${amount.toFixed(8)}</td>
+                    <td class="total">${total.toFixed(2)}</td>
+                    <td class="depth">${currentVolume.toFixed(2)}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
 
         console.log('Table filled with orders');
     }
