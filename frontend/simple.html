@@ -1175,6 +1175,15 @@
       socket.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data);
+          console.log('Отримано повідомлення:', message);
+          if (message.type === 'orderbook_update') {
+            console.log('Дані orderbook_update:', {
+              exchange: message.exchange,
+              token: message.token,
+              best_sell: message.data?.best_sell,
+              best_buy: message.data?.best_buy
+            });
+          }
           handleMessage(message);
         } catch (error) {
           console.error('Error parsing message:', error);
@@ -1223,10 +1232,13 @@
           renderTable();
           break;
         case 'orderbook_update':
+          console.log("orderbook_update received:", JSON.stringify(message, null, 2));
+          const { exchange: exchangeName, token: tokenName, best_sell, best_buy } = message;
+          console.log(`Updating prices for ${tokenName} on ${exchangeName}: sell=${best_sell}, buy=${best_buy}`);
           updateOrderbook(message);
           break;
         case 'orderbook_data':
-          console.log('Orderbook data received:', message);
+          console.log("orderbook_data received:", JSON.stringify(message, null, 2));
           const { token, exchange, data } = message;
           console.log('Processing orderbook data:', { token, exchange, data });
           
@@ -1524,8 +1536,27 @@
     function renderTable() {
       const filteredTokens = tokens;
       
-      const exchangesHeader = document.getElementById('exchanges-header');
+      // Перевіряємо чи існує елемент exchanges-header
+      let exchangesHeader = document.getElementById('exchanges-header');
+      if (!exchangesHeader) {
+        // Створюємо новий елемент, якщо він відсутній
+        exchangesHeader = document.createElement('th');
+        exchangesHeader.id = 'exchanges-header';
+        const headerRow = document.querySelector('#orderbook-table thead tr');
+        if (headerRow) {
+          headerRow.appendChild(exchangesHeader);
+        } else {
+          console.error('Header row not found');
+          return;
+        }
+      }
+
       const headerRow = exchangesHeader.parentElement;
+      if (!headerRow) {
+        console.error('Parent element of exchanges-header not found');
+        return;
+      }
+
       headerRow.innerHTML = `
         <th class="token-header" onclick="handleSort()" data-sort-icon="${isAscending ? '↑' : '↓'}">Token</th>
         <th>Type</th>
@@ -1961,6 +1992,8 @@
       let currentBuyPrice = 0;
 
       rightBuyRows.forEach(rightBuyRow => {
+        if (!rightBuyRow.cells || rightBuyRow.cells.length < 2) return;
+        
         const rightBuyPrice = parseFloat(rightBuyRow.cells[0].textContent);
         const rightBuyAmount = parseFloat(rightBuyRow.cells[1].textContent);
         if (isNaN(rightBuyPrice) || isNaN(rightBuyAmount)) return;

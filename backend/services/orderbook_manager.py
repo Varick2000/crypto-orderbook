@@ -14,6 +14,7 @@ from exchange_clients.base_client import BaseExchangeClient
 from exchange_clients.mexc import MEXCClient
 from exchange_clients.tradeogre import TradeOgreClient
 from exchange_clients.coinex import CoinExClient
+from exchange_clients.xeggex import XeggexClient
 
 # Налаштування логгера
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class OrderbookManager:
         self.last_update_time: Dict[str, Dict[str, float]] = {}  # {token: {exchange: timestamp}}
         self.listen_tasks = {}  # Завдання для прослуховування WebSocket
         self.polling_tasks = {}  # Завдання для polling HTTP бірж
+        self.connected_clients = set()  # Множина підключених WebSocket клієнтів
         self.update_stats = {
             'total_updates': 0,
             'successful_updates': 0,
@@ -63,6 +65,8 @@ class OrderbookManager:
                         client = MEXCClient(exchange_name, exchange_url, exchange_config)
                     elif exchange_name == "CoinEx":
                         client = CoinExClient(exchange_name, exchange_url, exchange_config)
+                    elif exchange_name == "Xeggex":
+                        client = XeggexClient(exchange_name, exchange_url, exchange_config)
                     else:
                         logger.warning(f"Unknown WebSocket exchange: {exchange_name}")
                         continue
@@ -84,7 +88,7 @@ class OrderbookManager:
                 self.exchanges[exchange_name] = client
                 
                 # Запускаємо прослуховування для WebSocket клієнтів
-                if exchange_type == "websocket":
+                if hasattr(client, 'listen') and exchange_name != "Xeggex":
                     logger.info(f"Starting WebSocket listener for {exchange_name}")
                     self.listen_tasks[exchange_name] = asyncio.create_task(client.listen())
                 
@@ -133,6 +137,8 @@ class OrderbookManager:
                 client = TradeOgreClient(name, url, config)
             elif name == "CoinEx":
                 client = CoinExClient(name, url, config)
+            elif name == "Xeggex":
+                client = XeggexClient(name, url, config)
             else:
                 logger.warning(f"Unknown exchange type: {name}, using base client")
                 if client_type == "websocket":
@@ -161,7 +167,7 @@ class OrderbookManager:
             self.exchanges[name] = client
             
             # Запускаємо прослуховування для WebSocket клієнтів
-            if hasattr(client, 'listen'):
+            if hasattr(client, 'listen') and name != "Xeggex":
                 self.listen_tasks[name] = asyncio.create_task(client.listen())
             
             # Запускаємо polling для HTTP клієнтів
@@ -284,200 +290,318 @@ class OrderbookManager:
         except Exception as e:
             logger.error(f"Error removing token {token}: {str(e)}")
     
-    async def _get_coinex_orderbook(self, client, token: str) -> Optional[dict]:
+    async def _get_coinex_orderbook(self, client, token: str) -> Dict[str, Any]:
         """
-        Отримання даних ордербуку з CoinEx.
+        Отримання даних ордербуку для CoinEx.
         
         Args:
-            client: Клієнт біржі CoinEx
-            token: Символ токену
+            client: Клієнт CoinEx
+            token (str): Символ токена
             
         Returns:
-            Optional[dict]: Дані ордербуку або None у випадку помилки
+            Dict[str, Any]: Дані ордербуку
         """
         try:
-            # Спочатку пробуємо отримати повний ордербук
-            if hasattr(client, 'get_orderbook'):
-                orderbook = await client.get_orderbook(token)
-                if orderbook and isinstance(orderbook, dict):
-                    return orderbook
+            # Отримуємо дані через REST API
+            orderbook = await client.get_orderbook(token)
+            if not orderbook:
+                logger.warning(f"CoinEx: No orderbook data for {token}")
+                return None
+                
+            # Форматуємо дані
+            asks = orderbook.get('asks', [])
+            bids = orderbook.get('bids', [])
             
-            # Якщо не вдалося, пробуємо отримати тільки найкращі ціни
-            if hasattr(client, 'get_best_prices'):
-                prices = await client.get_best_prices(token)
-                if prices and isinstance(prices, dict):
-                    return {
-                        'best_sell': prices.get('best_sell', 'X X X'),
-                        'best_buy': prices.get('best_buy', 'X X X'),
-                        'asks': [],
-                        'bids': []
-                    }
-                    
+            if not asks or not bids:
+                logger.warning(f"CoinEx: Empty orderbook for {token}")
+                return None
+                
+            # Отримуємо найкращі ціни
+            best_sell = orderbook.get('best_sell')
+            best_buy = orderbook.get('best_buy')
+            
+            if not best_sell or not best_buy:
+                logger.warning(f"CoinEx: Missing best prices for {token}")
+                return None
+                
+            return {
+                'asks': asks,
+                'bids': bids,
+                'best_sell': best_sell,
+                'best_buy': best_buy
+            }
+            
         except Exception as e:
-            logger.error(f"CoinEx: помилка отримання даних для {token}: {str(e)}")
-            
-        return None
+            logger.error(f"Error getting CoinEx orderbook for {token}: {str(e)}")
+            return None
 
-    async def _get_standard_orderbook(self, client, token: str) -> Optional[dict]:
+    async def _get_standard_orderbook(self, client, token: str) -> Dict[str, Any]:
         """
-        Отримання даних ордербуку зі стандартної біржі.
+        Отримання даних ордербуку в стандартному форматі.
         
         Args:
             client: Клієнт біржі
-            token: Символ токену
+            token (str): Символ токена
             
         Returns:
-            Optional[dict]: Дані ордербуку або None у випадку помилки
+            Dict[str, Any]: Дані ордербуку
         """
         try:
-            if hasattr(client, 'get_orderbook'):
-                orderbook = await client.get_orderbook(token)
-                if orderbook:
-                    best_sell = orderbook.get('best_sell')
-                    best_buy = orderbook.get('best_buy')
-                    
-                    if best_sell and best_buy:
-                        return orderbook
-                        
-        except Exception as e:
-            logger.error(f"Помилка отримання стандартного ордербуку для {token}: {str(e)}")
+            # Отримуємо дані ордербуку
+            orderbook_data = await client.get_orderbook(token)
+            if not orderbook_data:
+                logger.warning(f"No orderbook data received for {token}")
+                return None
+                
+            # Перевіряємо наявність необхідних полів
+            if not isinstance(orderbook_data, dict):
+                logger.warning(f"Invalid orderbook data format for {token}")
+                return None
+                
+            # Отримуємо asks та bids
+            asks = orderbook_data.get('asks', [])
+            bids = orderbook_data.get('bids', [])
             
-        return None
+            if not asks or not bids:
+                logger.warning(f"Empty orderbook for {token}")
+                return None
+                
+            # Отримуємо найкращі ціни
+            best_sell = asks[0][0] if asks else None
+            best_buy = bids[0][0] if bids else None
+            
+            if not best_sell or not best_buy:
+                logger.warning(f"Missing best prices for {token}")
+                return None
+                
+            # Форматуємо дані
+            formatted_data = {
+                'asks': asks,
+                'bids': bids,
+                'best_sell': best_sell,
+                'best_buy': best_buy
+            }
+            
+            logger.info(f"Formatted orderbook data for {token}: sell={best_sell}, buy={best_buy}")
+            return formatted_data
+            
+        except Exception as e:
+            logger.error(f"Error getting standard orderbook for {token}: {str(e)}")
+            return None
 
-    def _is_valid_prices(self, best_sell: str, best_buy: str) -> bool:
+    def _is_valid_prices(self, best_sell: Any, best_buy: Any) -> bool:
         """
         Перевірка валідності цін.
         
         Args:
             best_sell: Найкраща ціна продажу
-            best_buy: Найкраща ціна купівлі
+            best_buy: Найкраща ціна покупки
             
         Returns:
             bool: True якщо ціни валідні, False в іншому випадку
         """
-        if not best_sell or not best_buy:
-            return False
-            
         try:
+            # Перевіряємо на None або пусті значення
+            if best_sell is None or best_buy is None:
+                return False
+                
+            # Перевіряємо на плейсхолдер
+            if best_sell == 'X X X' or best_buy == 'X X X':
+                return False
+                
+            # Перевіряємо на числові значення
             sell_price = float(best_sell)
             buy_price = float(best_buy)
             
-            # Перевіряємо що ціни більше 0 і ціна продажу більша за ціну купівлі
-            return sell_price > 0 and buy_price > 0 and sell_price > buy_price
+            # Перевіряємо на позитивні значення
+            if sell_price <= 0 or buy_price <= 0:
+                return False
+                
+            # Перевіряємо на розумну різницю між цінами
+            if sell_price < buy_price:
+                return False
+                
+            return True
             
         except (ValueError, TypeError):
             return False
 
-    def _update_orderbook_cache(self, exchange_name: str, token: str, data: dict):
+    def _update_orderbook_cache(self, exchange: str, token: str, data: Dict[str, Any]):
         """
         Оновлення кешу ордербуку.
         
         Args:
-            exchange_name (str): Назва біржі
+            exchange (str): Назва біржі
             token (str): Символ токена
-            data (dict): Дані ордербуку
+            data (Dict[str, Any]): Дані ордербуку
         """
         try:
-            if token not in self.orderbooks:
-                self.orderbooks[token] = {}
-            
-            if exchange_name not in self.orderbooks[token]:
-                self.orderbooks[token][exchange_name] = {}
-            
-            # Оновлюємо дані
-            self.orderbooks[token][exchange_name].update({
-                'best_sell': data.get('best_sell', 'X X X'),
-                'best_buy': data.get('best_buy', 'X X X')
-            })
-            
-            # Оновлюємо час останнього оновлення
-            if token not in self.last_update_time:
-                self.last_update_time[token] = {}
-            self.last_update_time[token][exchange_name] = time.time()
-            
-            logger.info(f"Updated orderbook cache for {token} on {exchange_name}")
-            logger.info(f"New prices - sell: {data.get('best_sell')}, buy: {data.get('best_buy')}")
-            
+            if not data or not isinstance(data, dict):
+                logger.warning(f"Invalid orderbook data for {token} on {exchange}")
+                return
+                
+            # Спеціальна обробка для Xeggex
+            if exchange == "Xeggex":
+                logger.info(f"Оновлення кешу ордербуку для {token} на {exchange}")
+                asks = data.get('asks', [])
+                bids = data.get('bids', [])
+                
+                logger.info(f"Кількість asks: {len(asks)}, bids: {len(bids)}")
+                logger.info(f"Xeggex data in _update_orderbook_cache: asks={asks}, bids={bids}")
+                
+                if not asks or not bids:
+                    logger.warning(f"Empty orderbook for {token} on Xeggex")
+                    return
+                    
+                best_sell = float(asks[0]['price']) if asks else None
+                best_buy = float(bids[0]['price']) if bids else None
+                
+                logger.info(f"Найкращі ціни для {token}: sell={best_sell}, buy={best_buy}")
+                logger.info(f"Типи даних: sell={type(best_sell)}, buy={type(best_buy)}")
+                logger.info(f"Повні дані asks[0]: {json.dumps(asks[0], indent=2)}")
+                logger.info(f"Повні дані bids[0]: {json.dumps(bids[0], indent=2)}")
+                
+                if not best_sell or not best_buy:
+                    logger.warning(f"Missing best prices for {token} on Xeggex")
+                    return
+                    
+                # Оновлюємо кеш
+                if token not in self.orderbooks:
+                    self.orderbooks[token] = {}
+                self.orderbooks[token][exchange] = {
+                    'best_sell': str(best_sell),
+                    'best_buy': str(best_buy)
+                }
+                self.last_update_time[token][exchange] = time.time()
+                logger.info(f"Updated orderbook cache for {token} on {exchange}")
+                logger.info(f"Updated prices for {token} on {exchange}: sell={best_sell}, buy={best_buy}")
+            else:
+                # Стандартна обробка для інших бірж
+                best_sell = data.get('best_sell')
+                best_buy = data.get('best_buy')
+                
+                if not best_sell or not best_buy:
+                    logger.warning(f"Missing best prices for {token} on {exchange}")
+                    return
+                    
+                # Оновлюємо кеш
+                if token not in self.orderbooks:
+                    self.orderbooks[token] = {}
+                self.orderbooks[token][exchange] = {
+                    'best_sell': str(best_sell),
+                    'best_buy': str(best_buy)
+                }
+                self.last_update_time[token][exchange] = time.time()
+                logger.info(f"Updated orderbook cache for {token} on {exchange}")
+                logger.info(f"Updated prices for {token} on {exchange}: sell={best_sell}, buy={best_buy}")
+                
         except Exception as e:
-            logger.error(f"Error updating orderbook cache for {token} on {exchange_name}: {str(e)}")
+            logger.error(f"Error updating orderbook cache for {token} on {exchange}: {str(e)}")
 
-    async def _broadcast_update(self, exchange_name: str, token: str, data: dict):
+    async def _broadcast_update(self, exchange: str, token: str, data: Dict[str, Any]):
+        """Відправка оновлення ордербуку всім підключеним клієнтам."""
+        try:
+            # Форматуємо дані для відправки
+            if exchange == "Xeggex":
+                # Для Xeggex використовуємо спеціальний формат
+                message = {
+                    "type": "orderbook_update",
+                    "exchange": exchange,
+                    "token": token,
+                    "data": {
+                        "best_sell": data.get('best_sell'),
+                        "best_buy": data.get('best_buy')
+                    }
+                }
+            else:
+                # Для інших бірж використовуємо стандартний формат
+                message = {
+                    "type": "orderbook_update",
+                    "exchange": exchange,
+                    "token": token,
+                    "data": {
+                        "asks": data.get('asks', []),
+                        "bids": data.get('bids', []),
+                        "best_sell": data.get('best_sell'),
+                        "best_buy": data.get('best_buy')
+                    }
+                }
+            
+            # Відправляємо оновлення всім підключеним клієнтам
+            for websocket in self.connected_clients:
+                try:
+                    await websocket.send(json.dumps(message))
+                except Exception as e:
+                    logger.error(f"Error sending update to client: {str(e)}")
+                    await self._remove_client(websocket)
+                    
+        except Exception as e:
+            logger.error(f"Error broadcasting update: {str(e)}")
+
+    async def _handle_error(self, exchange: str, token: str, error: Exception):
         """
-        Відправка оновлення через WebSocket.
+        Обробка помилок при оновленні ордербуку.
         
         Args:
-            exchange_name (str): Назва біржі
+            exchange (str): Назва біржі
             token (str): Символ токена
-            data (dict): Дані для оновлення
+            error (Exception): Об'єкт помилки
         """
         try:
-            # Оновлюємо кеш
-            self._update_orderbook_cache(exchange_name, token, data)
+            # Логуємо помилку
+            logger.error(f"Error updating orderbook for {token} on {exchange}: {str(error)}")
             
-            # Формуємо дані для відправки
-            update_data = {
-                'exchange': exchange_name,
-                'token': token,
-                'best_sell': data.get('best_sell', 'X X X'),
-                'best_buy': data.get('best_buy', 'X X X')
+            # Оновлюємо статистику
+            self.update_stats['failed_updates'] += 1
+            
+            # Відправляємо повідомлення про помилку
+            error_message = {
+                "type": "error",
+                "exchange": exchange,
+                "token": token,
+                "message": str(error)
             }
             
-            # Відправляємо оновлення
-            await self.websocket_manager.broadcast(update_data)
-            logger.info(f"Broadcasted price update for {token} on {exchange_name}")
-            logger.info(f"Data being sent: {json.dumps(update_data, indent=2, ensure_ascii=False)}")
-            
+            # Відправляємо повідомлення всім підключеним клієнтам
+            for websocket in self.connected_clients:
+                try:
+                    await websocket.send(json.dumps(error_message))
+                except Exception as e:
+                    logger.error(f"Error sending error message to client: {str(e)}")
+                    await self._remove_client(websocket)
+                    
         except Exception as e:
-            logger.error(f"Error broadcasting update for {token} on {exchange_name}: {str(e)}")
-
-    async def _handle_error(self, exchange_name: str, token: str, error: Exception):
-        """
-        Обробка помилок оновлення ордербуку.
-        
-        Args:
-            exchange_name: Назва біржі
-            token: Символ токену
-            error: Об'єкт помилки
-        """
-        # Логуємо помилки тільки для CoinEx, для інших бірж просто оновлюємо статистику
-        if exchange_name == "CoinEx":
-            logger.error(f"Помилка оновлення ордербуку для {token} на {exchange_name}: {str(error)}")
-        
-        self.update_stats['failed_updates'] += 1
-        self.update_stats['last_error'] = str(error)
-        
-        # Встановлюємо значення за замовчуванням
-        if token not in self.orderbooks:
-            self.orderbooks[token] = {}
-        if exchange_name not in self.orderbooks[token]:
-            self.orderbooks[token][exchange_name] = {
-                'best_sell': 'X X X',
-                'best_buy': 'X X X',
-                'asks': [],
-                'bids': [],
-                'error': str(error),
-                'error_timestamp': time.time()
-            }
+            logger.error(f"Error handling error: {str(e)}")
 
     async def update_orderbooks(self):
         """Оновлення ордербуків для всіх токенів на всіх біржах"""
         self.update_stats['total_updates'] += 1
         current_time = time.time()
         
+        logger.info(f"Початок оновлення ордербуків. Всього бірж: {len(self.exchanges)}, токенів: {len(self.tokens)}")
+        
         for exchange_name, client in self.exchanges.items():
+            logger.info(f"Обробка біржі {exchange_name}")
+            
             for token in self.tokens:
                 try:
                     # Перевіряємо час останнього оновлення
                     last_update = self.last_update_time.get(token, {}).get(exchange_name, 0)
                     if current_time - last_update < 1:  # Пропускаємо якщо пройшло менше 1 секунди
+                        logger.debug(f"Пропускаємо оновлення для {token} на {exchange_name} - занадто швидко")
                         continue
                         
+                    logger.info(f"Отримання даних ордербуку для {token} на {exchange_name}")
+                    
                     # Отримуємо дані ордербуку
                     orderbook_data = None
                     if exchange_name == "CoinEx":
                         orderbook_data = await self._get_coinex_orderbook(client, token)
                     elif exchange_name == "TradeOgre":
                         orderbook_data = await self._get_tradeogre_orderbook(client, token)
+                    elif exchange_name == "Xeggex":
+                        # Для Xeggex використовуємо спеціальну обробку
+                        orderbook_data = await self._get_xeggex_orderbook(client, token)
                     else:
                         orderbook_data = await self._get_standard_orderbook(client, token)
                         
@@ -485,12 +609,18 @@ class OrderbookManager:
                         best_sell = orderbook_data.get('best_sell')
                         best_buy = orderbook_data.get('best_buy')
                         
+                        logger.info(f"Отримано дані для {token} на {exchange_name}: sell={best_sell}, buy={best_buy}")
+                        
                         # Перевіряємо чи змінилися ціни
                         current_data = self.orderbooks.get(token, {}).get(exchange_name, {})
                         current_sell = current_data.get('best_sell')
                         current_buy = current_data.get('best_buy')
                         
                         if (best_sell != current_sell or best_buy != current_buy) and self._is_valid_prices(best_sell, best_buy):
+                            logger.info(f"Ціни змінилися для {token} на {exchange_name}")
+                            logger.info(f"Стара ціна: sell={current_sell}, buy={current_buy}")
+                            logger.info(f"Нова ціна: sell={best_sell}, buy={best_buy}")
+                            
                             # Оновлюємо кеш
                             self._update_orderbook_cache(exchange_name, token, orderbook_data)
                             
@@ -498,11 +628,19 @@ class OrderbookManager:
                             await self._broadcast_update(exchange_name, token, orderbook_data)
                             
                             self.update_stats['successful_updates'] += 1
-                            logger.info(f"Updated prices for {token} on {exchange_name}: sell={best_sell}, buy={best_buy}")
+                        else:
+                            logger.debug(f"Ціни не змінилися для {token} на {exchange_name}")
+                    else:
+                        logger.warning(f"Не отримано даних ордербуку для {token} на {exchange_name}")
+                        self.update_stats['failed_updates'] += 1
                         
                 except Exception as e:
+                    logger.error(f"Помилка при оновленні ордербуку для {token} на {exchange_name}: {str(e)}")
+                    self.update_stats['failed_updates'] += 1
+                    self.update_stats['last_error'] = str(e)
                     await self._handle_error(exchange_name, token, e)
                     
+        logger.info(f"Завершено оновлення ордербуків. Статистика: {self.update_stats}")
         await asyncio.sleep(0.1)  # Невелика затримка між циклами
     
     async def start_polling(self):
@@ -613,3 +751,48 @@ class OrderbookManager:
         except Exception as e:
             logger.error(f"Error getting TradeOgre orderbook for {token}: {str(e)}")
             return None
+
+    async def _get_xeggex_orderbook(self, client, token: str) -> Dict[str, Any]:
+        """
+        Отримання даних ордербуку для Xeggex.
+        
+        Args:
+            client: Клієнт Xeggex
+            token (str): Символ токена
+            
+        Returns:
+            Dict[str, Any]: Дані ордербуку
+        """
+        try:
+            # Отримуємо дані через асинхронний метод
+            orderbook_data = await client.get_orderbook(token)
+            if not orderbook_data:
+                logger.warning(f"Xeggex: No orderbook data for {token}")
+                return None
+                
+            logger.info(f"Xeggex: Got orderbook data for {token}: {json.dumps(orderbook_data, indent=2)}")
+            return orderbook_data
+            
+        except Exception as e:
+            logger.error(f"Error getting Xeggex orderbook for {token}: {str(e)}")
+            return None
+
+    async def _remove_client(self, websocket):
+        """Видалення відключеного клієнта"""
+        if websocket in self.connected_clients:
+            self.connected_clients.remove(websocket)
+            logger.info(f"Client removed. Total clients: {len(self.connected_clients)}")
+
+    async def add_client(self, websocket):
+        """Додавання нового клієнта"""
+        self.connected_clients.add(websocket)
+        logger.info(f"New client added. Total clients: {len(self.connected_clients)}")
+
+    async def broadcast_update(self, message: Dict[str, Any]):
+        """Відправка оновлення всім підключеним клієнтам"""
+        for websocket in self.connected_clients:
+            try:
+                await websocket.send(json.dumps(message))
+            except Exception as e:
+                logger.error(f"Error sending update to client: {str(e)}")
+                await self._remove_client(websocket)

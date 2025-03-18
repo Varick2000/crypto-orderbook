@@ -57,14 +57,14 @@ async def init_db():
                 except aiosqlite.IntegrityError:
                     logger.info(f"Token {token} already exists")
         
-        # Перевіряємо чи є вже біржі в базі
-        cursor = await db.execute('SELECT COUNT(*) FROM exchanges')
-        exchange_count = await cursor.fetchone()
+        # Отримуємо список існуючих бірж
+        cursor = await db.execute('SELECT name FROM exchanges')
+        existing_exchanges = {row[0] for row in await cursor.fetchall()}
         
-        # Додаємо біржі тільки якщо таблиця порожня
-        if exchange_count[0] == 0:
-            logger.info("Adding initial exchanges...")
-            for exchange in EXCHANGES:
+        # Додаємо нові біржі
+        logger.info("Adding exchanges...")
+        for exchange in EXCHANGES:
+            if exchange['name'] not in existing_exchanges:
                 try:
                     config_json = json.dumps(exchange.get('config', {}))
                     await db.execute(

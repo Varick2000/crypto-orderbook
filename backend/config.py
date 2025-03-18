@@ -8,7 +8,8 @@ TOKENS = [
     "ETH",
     "XMR",
     "SOL",
-    "DOGE"
+    "DOGE",
+    "XRP"
 ]
 
 # Початкові налаштування для бірж
@@ -24,6 +25,16 @@ EXCHANGES = [
         "url": "wss://ws.coinex.com/",
         "type": "websocket",
         "config": {}
+    },
+    {
+        "name": "Xeggex",
+        "url": "wss://api.xeggex.com/ws/v2",
+        "type": "websocket",
+        "config": {
+            "ping_interval": 30,
+            "max_reconnect_attempts": 5,
+            "reconnect_interval": 5
+        }
     },
     {
         "name": "TradeOgre",
