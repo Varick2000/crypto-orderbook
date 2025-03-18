@@ -453,8 +453,8 @@ class OrderbookManager:
                     logger.warning(f"Empty orderbook for {token} on Xeggex")
                     return
                     
-                best_sell = float(asks[0]['price']) if asks else None
-                best_buy = float(bids[0]['price']) if bids else None
+                best_sell = asks[0]['price'] if asks else None
+                best_buy = bids[0]['price'] if bids else None
                 
                 logger.info(f"Найкращі ціни для {token}: sell={best_sell}, buy={best_buy}")
                 logger.info(f"Типи даних: sell={type(best_sell)}, buy={type(best_buy)}")
@@ -466,35 +466,36 @@ class OrderbookManager:
                     return
                     
                 # Оновлюємо кеш
-                if token not in self.orderbooks:
-                    self.orderbooks[token] = {}
                 self.orderbooks[token][exchange] = {
-                    'best_sell': str(best_sell),
-                    'best_buy': str(best_buy)
+                    'asks': asks,
+                    'bids': bids,
+                    'best_sell': best_sell,
+                    'best_buy': best_buy
                 }
                 self.last_update_time[token][exchange] = time.time()
-                logger.info(f"Updated orderbook cache for {token} on {exchange}")
-                logger.info(f"Updated prices for {token} on {exchange}: sell={best_sell}, buy={best_buy}")
+                
+                # Відправляємо оновлення
+                asyncio.create_task(self._broadcast_update(exchange, token, {
+                    'best_sell': best_sell,
+                    'best_buy': best_buy
+                }))
             else:
                 # Стандартна обробка для інших бірж
                 best_sell = data.get('best_sell')
                 best_buy = data.get('best_buy')
                 
-                if not best_sell or not best_buy:
-                    logger.warning(f"Missing best prices for {token} on {exchange}")
-                    return
+                if best_sell and best_buy:
+                    self.orderbooks[token][exchange] = {
+                        'asks': data.get('asks', []),
+                        'bids': data.get('bids', []),
+                        'best_sell': best_sell,
+                        'best_buy': best_buy
+                    }
+                    self.last_update_time[token][exchange] = time.time()
                     
-                # Оновлюємо кеш
-                if token not in self.orderbooks:
-                    self.orderbooks[token] = {}
-                self.orderbooks[token][exchange] = {
-                    'best_sell': str(best_sell),
-                    'best_buy': str(best_buy)
-                }
-                self.last_update_time[token][exchange] = time.time()
-                logger.info(f"Updated orderbook cache for {token} on {exchange}")
-                logger.info(f"Updated prices for {token} on {exchange}: sell={best_sell}, buy={best_buy}")
-                
+                    # Відправляємо оновлення
+                    asyncio.create_task(self._broadcast_update(exchange, token, data))
+                    
         except Exception as e:
             logger.error(f"Error updating orderbook cache for {token} on {exchange}: {str(e)}")
 

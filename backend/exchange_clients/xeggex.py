@@ -231,19 +231,16 @@ class XeggexClient(WebSocketExchangeClient):
                     bids = params.get('bids', [])
                     logger.info(f"{self.name}: Кількість asks: {len(asks)}, bids: {len(bids)}")
 
-                    # Якщо дані для asks/bids приходять у вигляді список списків
-                    # конвертуємо у словники з ключами "price", "quantity"
-                    if asks and isinstance(asks[0], list):
-                        logger.info(f"{self.name}: Конвертуємо asks для {symbol} з list[list] у list[dict]")
-                        # Конвертуємо дані у словник формат
-                        asks = [{"price": str(ask[0]), "amount": str(ask[1])} for ask in asks]
+                    # Форматуємо ціни незалежно від формату вхідних даних
+                    if asks:
+                        logger.info(f"{self.name}: Конвертуємо asks для {symbol}")
+                        asks = [{"price": self._format_price(ask["price"]), "amount": str(ask["quantity"])} for ask in asks]
                         logger.info(f"{self.name}: Приклад ask після конвертації: {json.dumps(asks[0], indent=2)}")
                         logger.info(f"{self.name}: Перші 3 asks після конвертації: {json.dumps(asks[:3], indent=2)}")
 
-                    if bids and isinstance(bids[0], list):
-                        logger.info(f"{self.name}: Конвертуємо bids для {symbol} з list[list] у list[dict]")
-                        # Конвертуємо дані у словник формат
-                        bids = [{"price": str(bid[0]), "amount": str(bid[1])} for bid in bids]
+                    if bids:
+                        logger.info(f"{self.name}: Конвертуємо bids для {symbol}")
+                        bids = [{"price": self._format_price(bid["price"]), "amount": str(bid["quantity"])} for bid in bids]
                         logger.info(f"{self.name}: Приклад bid після конвертації: {json.dumps(bids[0], indent=2)}")
                         logger.info(f"{self.name}: Перші 3 bids після конвертації: {json.dumps(bids[:3], indent=2)}")
 
@@ -267,14 +264,19 @@ class XeggexClient(WebSocketExchangeClient):
                     asks = params.get('asks', [])
                     bids = params.get('bids', [])
 
-                    if asks and isinstance(asks[0], list):
-                        logger.info(f"{self.name}: Конвертуємо оновлення asks для {symbol} з list[list] у list[dict]")
-                        # Конвертуємо дані у словник формат
-                        asks = [{"price": str(ask[0]), "amount": str(ask[1])} for ask in asks]
-                    if bids and isinstance(bids[0], list):
-                        logger.info(f"{self.name}: Конвертуємо оновлення bids для {symbol} з list[list] у list[dict]")
-                        # Конвертуємо дані у словник формат
-                        bids = [{"price": str(bid[0]), "amount": str(bid[1])} for bid in bids]
+                    # Форматуємо ціни незалежно від формату вхідних даних
+                    if asks:
+                        logger.info(f"{self.name}: Конвертуємо оновлення asks для {symbol}")
+                        if isinstance(asks[0], list):
+                            asks = [{"price": self._format_price(ask[0]), "amount": str(ask[1])} for ask in asks]
+                        else:
+                            asks = [{"price": self._format_price(ask["price"]), "amount": str(ask["quantity"])} for ask in asks]
+                    if bids:
+                        logger.info(f"{self.name}: Конвертуємо оновлення bids для {symbol}")
+                        if isinstance(bids[0], list):
+                            bids = [{"price": self._format_price(bid[0]), "amount": str(bid[1])} for bid in bids]
+                        else:
+                            bids = [{"price": self._format_price(bid["price"]), "amount": str(bid["quantity"])} for bid in bids]
 
                     # Логуємо конвертовані дані для оновлення
                     logger.info(f"{self.name}: Конвертовані дані оновлення - asks={json.dumps(asks[:3], indent=2)}, bids={json.dumps(bids[:3], indent=2)}")
@@ -328,7 +330,7 @@ class XeggexClient(WebSocketExchangeClient):
                 logger.warning(f"Xeggex: Empty orderbook for {token}")
                 return None
                 
-            # Отримуємо найкращі ціни
+            # Отримуємо найкращі ціни (вони вже відформатовані)
             best_sell = asks[0]['price'] if asks else None
             best_buy = bids[0]['price'] if bids else None
             
@@ -348,12 +350,47 @@ class XeggexClient(WebSocketExchangeClient):
             logger.error(f"Error getting Xeggex orderbook for {token}: {str(e)}")
             return None
 
+    def _format_price(self, price_str: str) -> str:
+        """
+        Форматування ціни з відповідною кількістю десяткових знаків.
+        """
+        try:
+            # Конвертуємо наукову нотацію в звичайне число
+            price = float(price_str)
+            
+            # Визначаємо кількість десяткових знаків на основі значення
+            if price >= 1000:
+                return f"{price:.2f}"
+            elif price >= 100:
+                return f"{price:.3f}"
+            elif price >= 10:
+                return f"{price:.4f}"
+            elif price >= 1:
+                return f"{price:.5f}"
+            elif price >= 0.1:
+                return f"{price:.6f}"
+            elif price >= 0.01:
+                return f"{price:.7f}"
+            else:
+                # Для дуже малих чисел використовуємо 8 знаків після коми
+                formatted = f"{price:.8f}"
+                # Прибираємо зайві нулі в кінці
+                return formatted.rstrip('0').rstrip('.')
+        except (ValueError, TypeError):
+            logger.warning(f"{self.name}: Не вдалося форматувати ціну: {price_str}")
+            return price_str
+
     def get_best_prices(self, token: str) -> Dict[str, str]:
         """
         Отримання найкращих цін (best_sell, best_buy) для заданого токена.
+        Ціни вже відформатовані в _process_message.
         """
         try:
             ob = self.get_orderbook(token)
+            if not ob:
+                logger.warning(f"{self.name}: No orderbook data for {token}")
+                return {'best_sell': 'X X X', 'best_buy': 'X X X'}
+
             asks = ob.get('asks', [])
             bids = ob.get('bids', [])
 
@@ -361,7 +398,7 @@ class XeggexClient(WebSocketExchangeClient):
                 logger.warning(f"{self.name}: Empty orderbook for {token}")
                 return {'best_sell': 'X X X', 'best_buy': 'X X X'}
 
-            # Припускаємо, що asks відсортовані за зростанням ціни, а bids - за спаданням.
+            # Ціни вже відформатовані в _process_message
             best_sell_str = asks[0]['price']
             best_buy_str = bids[0]['price']
 
