@@ -87,21 +87,20 @@ class OrderbookManager:
                 # Зберігаємо клієнта
                 self.exchanges[exchange_name] = client
                 
-                # Запускаємо прослуховування для WebSocket клієнтів
-                if hasattr(client, 'listen') and exchange_name != "Xeggex":
-                    logger.info(f"Starting WebSocket listener for {exchange_name}")
-                    self.listen_tasks[exchange_name] = asyncio.create_task(client.listen())
-                
-                # Запускаємо polling для HTTP клієнтів
-                if exchange_type == "http":
-                    logger.info(f"Starting HTTP polling for {exchange_name}")
-                    self.polling_tasks[exchange_name] = asyncio.create_task(self._poll_exchange(exchange_name))
-                
-                logger.info(f"Initialized exchange: {exchange_name}")
+                # Відправляємо статус підключення
+                await self.websocket_manager.broadcast({
+                    "type": "exchange_status",
+                    "exchange": exchange_name,
+                    "status": "connected"
+                })
                 
             except Exception as e:
                 logger.error(f"Error initializing exchange {exchange_name}: {str(e)}")
-                continue
+                await self.websocket_manager.broadcast({
+                    "type": "exchange_status",
+                    "exchange": exchange_name,
+                    "status": "error"
+                })
         
         # Ініціалізуємо структури даних
         for token in tokens:
@@ -797,3 +796,47 @@ class OrderbookManager:
             except Exception as e:
                 logger.error(f"Error sending update to client: {str(e)}")
                 await self._remove_client(websocket)
+
+    async def refresh_exchange(self, exchange_name: str):
+        """Оновлення даних для конкретної біржі"""
+        try:
+            if exchange_name not in self.exchanges:
+                logger.error(f"Exchange {exchange_name} not found")
+                return
+                
+            exchange = self.exchanges[exchange_name]
+            
+            # Відправляємо статус синхронізації
+            await self.websocket_manager.broadcast({
+                "type": "exchange_status",
+                "exchange": exchange_name,
+                "status": "syncing"
+            })
+            
+            # Оновлюємо дані
+            for token in self.tokens:
+                try:
+                    await exchange.refresh_token(token)
+                except Exception as e:
+                    logger.error(f"Error refreshing token {token} on {exchange_name}: {str(e)}")
+                    await self.websocket_manager.broadcast({
+                        "type": "exchange_status",
+                        "exchange": exchange_name,
+                        "status": "error"
+                    })
+                    return
+            
+            # Відправляємо статус успішного оновлення
+            await self.websocket_manager.broadcast({
+                "type": "exchange_status",
+                "exchange": exchange_name,
+                "status": "connected"
+            })
+            
+        except Exception as e:
+            logger.error(f"Error refreshing exchange {exchange_name}: {str(e)}")
+            await self.websocket_manager.broadcast({
+                "type": "exchange_status",
+                "exchange": exchange_name,
+                "status": "error"
+            })

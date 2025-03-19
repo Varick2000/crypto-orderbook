@@ -181,3 +181,49 @@ class BaseExchangeClient(abc.ABC):
                 break
                 
         return best_sell or "X X X", best_buy or "X X X"
+
+    async def connect(self):
+        """Підключення до API біржі"""
+        try:
+            self.is_connected = True
+            logger.info(f"{self.name}: Connected to API")
+            return True
+        except Exception as e:
+            logger.error(f"{self.name}: Failed to connect: {str(e)}")
+            self.is_connected = False
+            return False
+
+    async def disconnect(self):
+        """Відключення від API біржі"""
+        try:
+            self.is_connected = False
+            logger.info(f"{self.name}: Disconnected from API")
+            return True
+        except Exception as e:
+            logger.error(f"{self.name}: Error during disconnect: {str(e)}")
+            return False
+
+    async def refresh_token(self, token: str):
+        """Оновлення даних для конкретного токена"""
+        try:
+            if not self.is_connected:
+                logger.warning(f"{self.name}: Not connected, attempting to connect...")
+                if not await self.connect():
+                    logger.error(f"{self.name}: Failed to connect")
+                    return None
+
+            # Отримуємо дані
+            data = await self.get_orderbook(token)
+            if data:
+                self.orderbooks[token] = data
+                return data
+            else:
+                logger.warning(f"{self.name}: No data received for {token}")
+                return None
+        except Exception as e:
+            logger.error(f"{self.name}: Error refreshing token {token}: {str(e)}")
+            return None
+
+    async def get_orderbook(self, token: str) -> Dict[str, Any]:
+        """Отримання даних ордербуку для токена"""
+        raise NotImplementedError("Subclasses must implement get_orderbook")

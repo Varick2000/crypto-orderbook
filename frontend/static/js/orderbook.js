@@ -259,11 +259,22 @@ class CoinExFix {
             if (data.type === 'initial_data') {
                 console.log('Отримано початкові дані, перевіряємо дані CoinEx');
                 this.processCoinExData(data.orderbooks);
-            } else if (data.type === 'orderbook_update' && data.exchange === 'CoinEx') {
-                console.log('Отримано оновлення CoinEx:', data);
-                if (data.token && (data.best_sell || data.best_buy)) {
-                    this.forceCoinExUpdate(data.token, data.best_sell, data.best_buy);
+                // Оновлюємо статус CoinEx
+                this.updateExchangeStatus('CoinEx', 'connected');
+            } else if (data.type === 'orderbook_update') {
+                console.log('Отримано оновлення:', data);
+                if (data.exchange === 'CoinEx') {
+                    if (data.token && (data.best_sell || data.best_buy)) {
+                        this.forceCoinExUpdate(data.token, data.best_sell, data.best_buy);
+                        this.updateExchangeStatus('CoinEx', 'connected');
+                    }
+                } else {
+                    // Оновлюємо статус інших бірж
+                    this.updateExchangeStatus(data.exchange, 'connected');
                 }
+            } else if (data.type === 'exchange_status') {
+                // Оновлюємо статус біржі на основі повідомлення
+                this.updateExchangeStatus(data.exchange, data.status);
             }
         };
     }
@@ -370,6 +381,39 @@ class CoinExFix {
                 });
             }
         }, 60000);
+    }
+
+    updateExchangeStatus(exchange, status) {
+        const statusElement = document.getElementById(`${exchange}-status`);
+        if (!statusElement) return;
+
+        // Видаляємо всі попередні класи статусу
+        statusElement.classList.remove(
+            'exchange-connected',
+            'exchange-disconnected',
+            'exchange-no-data',
+            'exchange-error',
+            'exchange-syncing'
+        );
+
+        // Додаємо новий клас статусу
+        switch (status) {
+            case 'connected':
+                statusElement.classList.add('exchange-connected');
+                break;
+            case 'disconnected':
+                statusElement.classList.add('exchange-disconnected');
+                break;
+            case 'no_data':
+                statusElement.classList.add('exchange-no-data');
+                break;
+            case 'error':
+                statusElement.classList.add('exchange-error');
+                break;
+            case 'syncing':
+                statusElement.classList.add('exchange-syncing');
+                break;
+        }
     }
 }
 

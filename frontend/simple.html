@@ -220,16 +220,71 @@
       background-color: #f59e0b;
       box-shadow: 0 0 3px #f59e0b;
     }
+    .exchange-error {
+      background-color: #dc2626;
+      box-shadow: 0 0 3px #dc2626;
+    }
+    .exchange-syncing {
+      background-color: #3b82f6;
+      box-shadow: 0 0 3px #3b82f6;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+    .exchange-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .exchange-header span {
+      flex: 1;
+    }
     .status-legend {
       position: fixed;
-      right: 20px;
+      right: -200px;
       top: 20px;
       background-color: #2d2d2d;
       padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      border-radius: 8px 0 0 8px;
+      box-shadow: -2px 2px 4px rgba(0,0,0,0.2);
       font-size: 14px;
       color: #ffffff;
+      transition: right 0.3s ease;
+      z-index: 1000;
+      width: 200px;
+    }
+
+    .status-legend:hover {
+      right: 0;
+    }
+
+    .status-legend::before {
+      content: "Статус бірж";
+      position: absolute;
+      left: -80px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      background-color: #2d2d2d;
+      padding: 5px 10px;
+      border-radius: 4px 4px 0 0;
+      font-size: 12px;
+      white-space: nowrap;
+      box-shadow: -2px -2px 4px rgba(0,0,0,0.2);
+    }
+
+    .light-theme .status-legend::before {
+      background-color: #f8fafc;
+      color: #374151;
     }
     .status-legend h3 {
       margin: 0 0 15px 0;
@@ -864,6 +919,7 @@
       background-color: #047857;
     }
   </style>
+  <script src="static/js/orderbook-updater.js"></script>
 </head>
 <body>
   <div class="status-legend">
@@ -880,6 +936,14 @@
       <div class="status-legend-item">
         <div class="exchange-status-indicator exchange-disconnected"></div>
         <span>Відключено</span>
+      </div>
+      <div class="status-legend-item">
+        <div class="exchange-status-indicator exchange-error"></div>
+        <span>Помилка</span>
+      </div>
+      <div class="status-legend-item">
+        <div class="exchange-status-indicator exchange-syncing"></div>
+        <span>Синхронізація</span>
       </div>
     </div>
     <button id="theme-toggle" class="theme-toggle">
@@ -1176,15 +1240,37 @@
         try {
           const message = JSON.parse(event.data);
           console.log('Отримано повідомлення:', message);
-          if (message.type === 'orderbook_update') {
-            console.log('Дані orderbook_update:', {
-              exchange: message.exchange,
-              token: message.token,
-              best_sell: message.data?.best_sell,
-              best_buy: message.data?.best_buy
-            });
+          
+          switch (message.type) {
+            case 'initial_data':
+              tokens = message.tokens || [];
+              exchanges = message.exchanges.map(e => e.name) || [];
+              orderbooks = message.orderbooks || {};
+              window.lastData = { tokens, exchanges, orderbooks };
+              updateTokenFilter();
+              updateExchangeSelects();
+              updateTokenSelects();
+              renderTable();
+              break;
+              
+            case 'orderbook_update':
+              console.log('Дані orderbook_update:', {
+                exchange: message.exchange,
+                token: message.token,
+                best_sell: message.data?.best_sell,
+                best_buy: message.data?.best_buy
+              });
+              updateOrderbook(message);
+              break;
+              
+            case 'orderbook':
+              console.log('Дані orderbook:', message.data);
+              updateOrderbookTable(message.data);
+              break;
+              
+            default:
+              handleMessage(message);
           }
-          handleMessage(message);
         } catch (error) {
           console.error('Error parsing message:', error);
         }
@@ -1316,25 +1402,28 @@
     }
 
     function updateOrderbook(data) {
-      const { exchange, token, best_sell, best_buy } = data;
-      if (!orderbooks[token]) orderbooks[token] = {};
-      
-      // Перевіряємо, чи змінилися значення
-      const currentOrderbook = orderbooks[token][exchange] || {};
-      if (currentOrderbook.best_sell !== best_sell || currentOrderbook.best_buy !== best_buy) {
-        orderbooks[token][exchange] = { best_sell, best_buy };
-        
-        // Оновлюємо тільки ті клітинки, які змінилися
-        if (currentOrderbook.best_sell !== best_sell) {
-          updateTableCell(token, exchange, 'sell', best_sell);
-        }
-        if (currentOrderbook.best_buy !== best_buy) {
-          updateTableCell(token, exchange, 'buy', best_buy);
-        }
+        const { exchange, token, data: orderbookData } = data;
+        if (!orderbookData) return;
 
-        // Аналізуємо всю таблицю після оновлення
-        analyzeAndUpdateAllCells();
-      }
+        const { best_sell, best_buy } = orderbookData;
+        if (!best_sell || !best_buy) return;
+
+        const sellPrice = parseFloat(best_sell.price);
+        const buyPrice = parseFloat(best_buy.price);
+        const spread = ((sellPrice - buyPrice) / buyPrice) * 100;
+
+        const row = document.querySelector(`tr[data-token="${token}"]`);
+        if (!row) return;
+
+        // Видаляємо попередні класи
+        row.classList.remove('highlight-green', 'highlight-red');
+
+        // Додаємо нові класи тільки якщо є арбітраж
+        if (spread >= parseFloat(thresholdInput.value)) {
+            row.classList.add('highlight-green');
+        } else if (spread <= -parseFloat(thresholdInput.value)) {
+            row.classList.add('highlight-red');
+        }
     }
 
     function analyzeAndUpdateAllCells() {
@@ -1560,7 +1649,14 @@
       headerRow.innerHTML = `
         <th class="token-header" onclick="handleSort()" data-sort-icon="${isAscending ? '↑' : '↓'}">Token</th>
         <th>Type</th>
-        ${exchanges.map(exchange => `<th>${exchange}</th>`).join('')}
+        ${exchanges.map(exchange => `
+          <th>
+            <div class="exchange-header">
+              <span>${exchange}</span>
+              <div class="exchange-status-indicator exchange-connected" id="${exchange}-status"></div>
+            </div>
+          </th>
+        `).join('')}
       `;
       
       window.handleSort();
@@ -2106,6 +2202,31 @@
         analyzeAndUpdateAllCells();
       }
     }, 500); // Аналіз кожні 500 мс
+
+    function updateOrderbookTable(orders) {
+        const table = document.getElementById('orderbook-table');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        // Очищаємо поточні дані
+        tbody.innerHTML = '';
+
+        // Додаємо нові дані
+        orders.forEach(order => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="token-cell">${order.token}</td>
+                <td class="type-cell ${order.type === 'sell' ? 'sell-price' : 'buy-price'}">${order.type}</td>
+                <td>${order.price}</td>
+                <td>${order.amount}</td>
+                <td>${order.total}</td>
+                <td>${order.exchange}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
   </script>
 </body>
 </html>
